@@ -5,6 +5,14 @@
 
   let connectStatus = 'Connect FHIR';
   let isLoading = false;
+  let currentRoute;
+
+  $: {currentRoute = $page.url.pathname;
+  console.log('Current route:', currentRoute);}
+  
+  const noLayoutRoutes = ['/avail/update-schedule'];
+
+  $: hideLayout = noLayoutRoutes.includes(currentRoute);
 
   // Define the base API path
   const apiBase = '/avail';
@@ -44,6 +52,8 @@
       {/if}
       {connectStatus}
     </button>
+
+    {#if !hideLayout}
     <ul>
       <li class:active={$page.url.pathname === `${apiBase}/organizations`}>
         <a href="{apiBase}/organizations">Organizations</a>
@@ -55,6 +65,7 @@
         <a href="{apiBase}/practitioner-roles">Practitioner Roles</a>
       </li>
     </ul>
+    {/if}
   </nav>
   <main>
     <slot />

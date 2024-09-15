@@ -16,16 +16,16 @@ const wss = new WebSocketServer({ server, path: '/avail' });
 
 app.use(express.json());
 
-const PROJECT_ID = 'combine-fhir-smart-store';
-const LOCATION = 'us-central1';
-const DATASET_ID = 'COMBINE-FHIR-v1';
-const FHIR_STORE_ID = '1';
+global.PROJECT_ID = 'combine-fhir-smart-store';
+global.LOCATION = 'us-central1';
+global.DATASET_ID = 'COMBINE-FHIR-v1';
+global.FHIR_STORE_ID = '1';
 
-const healthcare = google.healthcare('v1');
+global.healthcare = google.healthcare('v1');
 
 //  console.log ("healthcare: "+JSON.stringify(healthcare));
 
-let auth;
+global.auth = true;
 
 
 
@@ -67,6 +67,9 @@ const connectToGoogleCloud = async () => {
     // Get the project ID
     const projectId = await auth.getProjectId();
 
+    //check on extension 'capacity' exist
+    manageStructureDefinition(auth);
+
     return { success: true, message: 'Successfully connected to Google Cloud Healthcare API' };
   } catch (error) {
     console.error('Error connecting to Google Cloud Healthcare API:', error);
@@ -77,7 +80,16 @@ const connectToGoogleCloud = async () => {
   }
 };
 
+app.get('/avail/api/UpdateSchedule', (req, res) => {
+  // Extract the 'id' parameter from the query string
+  const id = req.query.id;
 
+  // Log the 'id' to the console
+  console.log('Received id:', id);
+
+    // Forward the request to SvelteKit and let it handle rendering
+    res.redirect(`/avail/update-schedule?id=${id}`);
+});
 
 app.post('/avail/api/connect', async (req, res) => {
   const result = await connectToGoogleCloud();
@@ -323,41 +335,38 @@ app.get('/avail/api/allOrganizations', async (req, res) => {
 });
 
 
-app.post('/avail/api/updateRoles', async (req, res) => {
+app.put('/avail/api/updateRole', async (req, res) => {
   if (!auth) {
     return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
   }
 
   try {
-    const { practitionerRoles } = req.body;
+    const updatedRole = req.body;
     const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;
 
-    const bundle = {
-      resourceType: 'Bundle',
-      type: 'transaction',
-      entry: practitionerRoles.map(role => ({
-        resource: role,
-        request: {
-          method: 'POST',
-          url: 'PractitionerRole'
-        }
-      }))
-    };
+    // Validate the incoming PractitionerRole resource
+    if (updatedRole.resourceType !== 'PractitionerRole' || !updatedRole.id) {
+      return res.status(400).json({ error: 'Invalid PractitionerRole format' });
+    }
 
-    const response = await healthcare.projects.locations.datasets.fhirStores.fhir.executeBundle({
-      parent,
-      resourceType: 'Bundle',
-      auth: auth,
-      requestBody: bundle
+    const response = await healthcare.projects.locations.datasets.fhirStores.fhir.update({
+      name: `${parent}/fhir/PractitionerRole/${updatedRole.id}`,
+      requestBody: updatedRole,
+      auth: auth
     });
 
-    res.json({ message: 'Roles updated successfully', data: response.data });
+    // Check if the update was successful
+    const result = await handleBlobResponse(response.data);
+    if (response.status === 200 || response.status === 201) {
+      res.json({ message: 'PractitionerRole updated successfully', data: result });
+    } else {
+      throw new Error('Failed to update PractitionerRole');
+    }
   } catch (error) {
-    console.error('Error updating roles:', error);
-    res.status(500).json({ error: 'Failed to update roles' });
+    console.error('Error updating PractitionerRole:', error);
+    res.status(500).json({ error: 'Failed to update PractitionerRole', details: error.message });
   }
 });
-
 
 
 app.get('/avail/api/allRoles', async (req, res) => {
@@ -374,6 +383,7 @@ app.get('/avail/api/allRoles', async (req, res) => {
       resourceType: 'PractitionerRole',
       auth: auth,
     });
+    console.log("allRoles - rolesResponse"+ JSON.stringify(rolesResponse.data, null, 2));
 
     const rolesData = await handleBlobResponse(rolesResponse.data);
 
@@ -396,7 +406,7 @@ app.get('/avail/api/allRoles', async (req, res) => {
           auth: auth,
         });
         const organization = await handleBlobResponse(organizationResponse.data);
-
+        const availability = role.availability || [];
         return {
           id: role.id,
           practitioner: {
@@ -407,6 +417,7 @@ app.get('/avail/api/allRoles', async (req, res) => {
             id: organization.id,
             name: organization.name,
           },
+          availability: availability,
         };
       }));
     } else if (rolesData && rolesData.total === 0) {
@@ -422,7 +433,425 @@ app.get('/avail/api/allRoles', async (req, res) => {
   }
 });
 
+app.post('/avail/api/UpdateRole', async (req, res) => {
+  if (!auth) {
+    return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
+  }
 
+  try {
+    const practitionerRoleResource = req.body;
+
+    // Ensure the resourceType is set to "PractitionerRole"
+    if (practitionerRoleResource.resourceType !== "PractitionerRole") {
+      return res.status(400).json({ error: 'Invalid resource type. Must be PractitionerRole.' });
+    }
+
+    // Ensure the resource has an id
+    if (!practitionerRoleResource.id) {
+      return res.status(400).json({ error: 'PractitionerRole resource must have an id for updating.' });
+    }
+
+    const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;
+    const name = `${parent}/fhir/PractitionerRole/${practitionerRoleResource.id}`;
+
+    console.log(`Attempting to update PractitionerRole with id: ${practitionerRoleResource.id}`);
+    console.log('PractitionerRole data:', JSON.stringify(practitionerRoleResource, null, 2));
+
+    const response = await healthcare.projects.locations.datasets.fhirStores.fhir.update({
+      name,
+      requestBody: practitionerRoleResource,
+      auth: auth
+    });
+
+    console.log('API Response:', JSON.stringify(response.data, null, 2));
+
+    res.status(200).json({
+      message: 'PractitionerRole updated successfully',
+      data: response.data
+    });
+
+  } catch (error) {
+    console.error('Error updating PractitionerRole:', error);
+    console.error('Error details:', JSON.stringify(error.response?.data, null, 2));
+    res.status(500).json({
+      message: 'Failed to update PractitionerRole',
+      error: error.message || 'Unknown error occurred',
+      details: error.response?.data
+    });
+  }
+});
+
+
+app.get('/avail/api/GetPractitionersRoles', async (req, res) => {
+  if (!auth) {
+    return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
+  }
+
+  try {
+    const { id } = req.query; // Get the Practitioner ID from query parameters
+    if (!id) {
+      return res.status(400).json({ error: 'Practitioner ID is required.' });
+    }
+
+
+   // const practitionerId = '30904792-995a-4551-b185-657d8e4ea08e';
+
+      const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;
+      
+      const response = await healthcare.projects.locations.datasets.fhirStores.fhir.search({
+        parent: parent,
+        resourceType: "PractitionerRole", 
+        practitioner: id,
+ 
+        auth: auth,
+      });
+
+     // console.log("allRoles - rolesResponse"+ JSON.stringify(response.data, null, 2));
+      const rolesData = await handleBlobResponse(response.data);
+      console.log ("rolesData"+ JSON.stringify(rolesData, null, 2));
+
+
+    //console.log ("response:"+JSON.stringify(response));
+ 
+
+
+    if (!rolesData.entry || rolesData.entry.length === 0) {
+      return res.json({ message: 'No roles found for the given practitioner.', practitionerRoles: [] });
+    }
+
+    const practitionerRoles = await Promise.all(rolesData.entry.map(async (entry) => {
+      const role = entry.resource;        
+        // Fetch Practitioner details
+        const practitionerResponse = await healthcare.projects.locations.datasets.fhirStores.fhir.read({
+          name: `${parent}/fhir/${role.practitioner.reference}`,
+          auth: auth,
+        });
+        const practitioner = await handleBlobResponse(practitionerResponse.data);
+        
+        // Fetch Organization details
+        const organizationResponse = await healthcare.projects.locations.datasets.fhirStores.fhir.read({
+          name: `${parent}/fhir/${role.organization.reference}`,
+          auth: auth,
+        });
+        const organization = await handleBlobResponse(organizationResponse.data);
+  
+        return {
+          id: role.id,
+          practitioner: {
+            id: practitioner.id,
+            name: practitioner.name && practitioner.name[0] ? 
+              `${practitioner.name[0].given.join(' ')} ${practitioner.name[0].family}` : 
+              'Unknown'
+          },
+          organization: {
+            id: organization.id,
+            name: organization.name
+          },
+          availabilityTimes: role.availabilityTime || []
+        };
+      }));
+
+    res.json({ practitionerRoles });
+  } catch (error) {
+    console.error('Error retrieving practitioner roles:', error);
+    res.status(500).json({ error: 'Failed to retrieve practitioner roles' });
+  }
+});
+
+//Capacity endpoint
+//
+// Endpoint to update PractitionerRole with Capacity data
+app.post('/avail/api/updateCapacity', async (req, res) => {
+  if (!auth) {
+    return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
+  }
+
+  try {
+    const { practitionerRoleId, capacityData } = req.body;
+
+    // Validate input
+    if (!practitionerRoleId || !capacityData) {
+      return res.status(400).json({ error: 'practitionerRoleId and capacityData are required.' });
+    }
+
+    // Call the function to update PractitionerRole with Capacity data
+    const updatedPractitionerRole = await updatePractitionerRoleWithCapacity(auth, practitionerRoleId, capacityData);
+
+    res.status(200).json({
+      message: 'PractitionerRole capacity updated successfully',
+      data: updatedPractitionerRole
+    });
+
+  } catch (error) {
+    console.error('Error updating PractitionerRole capacity:', error);
+    res.status(500).json({
+      message: 'Failed to update PractitionerRole capacity',
+      error: error.message || 'Unknown error occurred'
+    });
+  }
+});
+
+
+// Capacity 
+//
+// Function to update PractitionerRole with Capacity data - extension
+async function updatePractitionerRoleWithCapacity(auth, practitionerRoleId, capacityData) {
+  const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;
+  const name = `${parent}/fhir/PractitionerRole/${practitionerRoleId}`;
+
+  try {
+    // First, get the existing PractitionerRole
+    const getResponse = await healthcare.projects.locations.datasets.fhirStores.fhir.read({
+      name: name,
+      auth: auth
+    });
+
+    const practitionerRole = getResponse.data;
+
+    // Add or update the extension
+    if (!practitionerRole.extension) {
+      practitionerRole.extension = [];
+    }
+
+    const capacityExtension = practitionerRole.extension.find(ext => 
+      ext.url === "https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html"
+    );
+
+    if (capacityExtension) {
+      capacityExtension.extension = capacityData;
+    } else {
+      practitionerRole.extension.push({
+        url: "https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html",
+        extension: capacityData
+      });
+    }
+
+    // Update the PractitionerRole
+    const updateResponse = await healthcare.projects.locations.datasets.fhirStores.fhir.update({
+      name: name,
+      requestBody: practitionerRole,
+      auth: auth
+    });
+
+    console.log('PractitionerRole updated successfully:', updateResponse.data);
+    return updateResponse.data;
+  } catch (error) {
+    console.error('Error updating PractitionerRole:', error);
+    throw error;
+  }
+}
+
+app.get('/avail/api/GetCapacity', async (req, res) => {
+  if (!auth) {
+    return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
+  }
+
+  try {
+    const { id } = req.query; // Get the PractitionerRole ID from query parameters
+    if (!id) {
+      return res.status(400).json({ error: 'PractitionerRole ID is required.' });
+    }
+
+    const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;
+    const name = `${parent}/fhir/PractitionerRole/${id}`;
+
+    // Fetch the PractitionerRole resource
+    const response = await healthcare.projects.locations.datasets.fhirStores.fhir.read({
+      name: name,
+      auth: auth
+    });
+
+    const practitionerRole = await handleBlobResponse(response.data);
+
+    // Find the capacity extension
+    const capacityExtension = practitionerRole.extension?.find(ext => 
+      ext.url === "https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html"
+    );
+
+    if (capacityExtension) {
+      res.json({ capacity: capacityExtension.extension });
+    } else {
+      res.json({ capacity: null, message: 'No capacity data found for this PractitionerRole.' });
+    }
+
+  } catch (error) {
+    console.error('Error retrieving capacity data:', error);
+    res.status(500).json({ error: 'Failed to retrieve capacity data', details: error.message });
+  }
+});
+
+async function manageStructureDefinition(auth) {
+ 
+
+  const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;
+  const structureDefinitionUrl = "http://example.com/StructureDefinition/practitioner-capacity";
+
+  try {
+    // First, check if the StructureDefinition already exists
+    const searchResponse = await healthcare.projects.locations.datasets.fhirStores.fhir.search({
+      parent: parent,
+      resourceType: 'StructureDefinition',
+      auth: auth,
+      searchParams: {
+        url: structureDefinitionUrl
+      }
+    });
+
+    const searchResult = await handleBlobResponse(searchResponse.data);
+
+    if (searchResult.entry && searchResult.entry.length > 0) {
+      console.log('StructureDefinition already exists:', searchResult.entry[0].resource);
+      return searchResult.entry[0].resource;
+    }
+
+    // If it doesn't exist, create a new one
+    const structureDefinition = {
+        "resourceType": "StructureDefinition",
+        "url": "https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html",
+        "name": "PractitionerCapacity",
+        "status": "draft",
+        "fhirVersion": "4.0.1",
+        "kind": "complex-type",
+        "abstract": false,
+        "type": "Extension",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+        "context": [
+          {
+            "type": "element",
+            "expression": "PractitionerRole"
+          }
+        ],
+        "differential": {
+          "element": [
+            {
+              "id": "Extension",
+              "path": "Extension",
+              "short": "Practitioner capacity for different patient types"
+            },
+            {
+              "id": "Extension.extension:children",
+              "path": "Extension.extension",
+              "sliceName": "children",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "Extension"
+                }
+              ]
+            },
+            {
+              "id": "Extension.extension:children.value[x]",
+              "path": "Extension.extension.value[x]",
+              "type": [
+                {
+                  "code": "integer"
+                }
+              ]
+            },
+            {
+              "id": "Extension.extension:adults",
+              "path": "Extension.extension",
+              "sliceName": "adults",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "Extension"
+                }
+              ]
+            },
+            {
+              "id": "Extension.extension:adults.value[x]",
+              "path": "Extension.extension.value[x]",
+              "type": [
+                {
+                  "code": "integer"
+                }
+              ]
+            },
+            {
+              "id": "Extension.extension:teens",
+              "path": "Extension.extension",
+              "sliceName": "teens",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "Extension"
+                }
+              ]
+            },
+            {
+              "id": "Extension.extension:teens.value[x]",
+              "path": "Extension.extension.value[x]",
+              "type": [
+                {
+                  "code": "integer"
+                }
+              ]
+            },
+            {
+              "id": "Extension.extension:couples",
+              "path": "Extension.extension",
+              "sliceName": "couples",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "Extension"
+                }
+              ]
+            },
+            {
+              "id": "Extension.extension:couples.value[x]",
+              "path": "Extension.extension.value[x]",
+              "type": [
+                {
+                  "code": "integer"
+                }
+              ]
+            },
+            {
+              "id": "Extension.extension:families",
+              "path": "Extension.extension",
+              "sliceName": "families",
+              "min": 0,
+              "max": "1",
+              "type": [
+                {
+                  "code": "Extension"
+                }
+              ]
+            },
+            {
+              "id": "Extension.extension:families.value[x]",
+              "path": "Extension.extension.value[x]",
+              "type": [
+                {
+                  "code": "integer"
+                }
+              ]
+            }
+          ]
+        }
+      }
+
+    const createResponse = await healthcare.projects.locations.datasets.fhirStores.fhir.create({
+      parent: parent,
+      type: 'StructureDefinition',
+      requestBody: structureDefinition,
+      auth: auth
+    });
+
+    console.log('StructureDefinition created successfully:', createResponse.data);
+    return createResponse.data;
+
+  } catch (error) {
+    console.error('Error managing StructureDefinition:', error);
+    throw error;
+  }
+}
 
 
 app.use(handler);
