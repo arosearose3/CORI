@@ -5,6 +5,7 @@
     import AddConditionForm from './AddConditionForm.svelte'; // Assuming you have AddConditionForm component
   
     export let currentPatientId;
+    export let currentPractitionerId;
   
     let showGoalForm = false;
     let showConditionForm = false;
@@ -23,19 +24,19 @@
   <div class="info-section">
     {#if showGoalForm}
       <!-- Display the Add Goal form -->
-      <AddGoalForm {currentPatientId} />
+      <AddGoalForm {currentPatientId} {currentPractitionerId} />
     {:else if showConditionForm}
       <!-- Display the Add Condition form -->
-      <!-- <AddConditionForm {currentPatientId} /> -->
+      <AddConditionForm {currentPatientId} {currentPractitionerId} />
     {:else}
       <!-- Default view with Goals and Conditions lists -->
       <h4>Goals</h4>
       <button on:click={addGoal}>Add Goal</button>
-      <!-- <GoalsList {currentPatientId} /> -->
+      <!-- <GoalsList {currentPatientId} {currentPractitionerId} />/> -->
   
       <h4>Conditions</h4>
       <button on:click={addCondition}>Add Condition</button>
-      <!-- <ConditionsList {currentPatientId} /> -->
+      <!-- <ConditionsList {currentPatientId} {currentPractitionerId} />/> -->
     {/if}
   </div>
   

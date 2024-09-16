@@ -51,11 +51,30 @@
 
   let selectedCategories = [];
   
-  function handleSubmit() {
+  async function  handleSubmit() {
     newGoal.category = selectedCategories.map(code => ({ coding: [{ code }] }));
     
     console.log('Submitting new goal:', newGoal);
-    // Submit logic here (e.g., POST to server)
+
+    try {
+      const response = await fetch('/avail/api/goal/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/fhir+json'
+        },
+        body: JSON.stringify(newGoal)
+      });
+
+      if (response.ok) {
+        alert('Goal created successfully');
+      } else {
+        console.error('Failed to create goal:', await response.text());
+        alert('Failed to create goal');
+      }
+    } catch (error) {
+      console.error('Error creating goal:', error);
+      alert('Error creating goal');
+    }
   }
 </script>
 

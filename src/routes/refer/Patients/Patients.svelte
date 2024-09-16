@@ -5,6 +5,7 @@
 
   let selectedTab = 'referrals';
   export let currentPatientId ;
+  export let currentPractitionerId;
   
   function switchTab(tab) {
     selectedTab = tab;
@@ -24,13 +25,13 @@
   <!-- Tab Content -->
   <main>
     {#if selectedTab === 'referrals'}
-      <Referrals {currentPatientId} />
+      <Referrals {currentPatientId} {currentPractitionerId} />
     {/if}
     {#if selectedTab === 'consents'}
-      <Consents {currentPatientId} />
+      <Consents {currentPatientId} {currentPractitionerId} />
     {/if}
     {#if selectedTab === 'info'}
-      <Info {currentPatientId} />
+      <Info {currentPatientId} {currentPractitionerId} />
     {/if}
   </main>
 </div>

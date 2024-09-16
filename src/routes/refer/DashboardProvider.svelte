@@ -75,7 +75,7 @@
     
       <!-- If patient is selected, show the Patients component -->
          {#if showPatientsComponent}
-          <Patients {currentPatientId} />
+         <Patients {currentPatientId} {currentPractitionerId} />
          {/if}
         {/if}
 

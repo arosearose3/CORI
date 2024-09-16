@@ -8,7 +8,7 @@
   // Fetch all goals for the current patient
   async function fetchGoals() {
     try {
-      const response = await fetch(`/goal/${currentPatientId}`);
+      const response = await fetch(`/avail/api/goal/${currentPatientId}`);
       if (!response.ok) {
         throw new Error(`Error fetching goals: ${response.statusText}`);
       }

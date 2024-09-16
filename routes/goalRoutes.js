@@ -59,7 +59,7 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-    const resourceUrl = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}/fhir/Goal/${id}`;
+    const resourceUrl = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}/fhir/Goal?patient=${id}`;
     const response = await healthcare.projects.locations.datasets.fhirStores.fhir.read({
       name: resourceUrl,
       auth: auth,

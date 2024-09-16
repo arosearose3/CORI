@@ -45,7 +45,7 @@
     // Fetch existing referrals and patient goals
     async function fetchReferrals() {
       try {
-        const response = await fetch(`/servicerequests/${currentPatientId}`);
+        const response = await fetch(`/avail/api/servicerequest/${currentPatientId}`);
         referrals = await response.json();
       } catch (error) {
         console.error('Error fetching referrals:', error);
@@ -54,7 +54,7 @@
   
     async function fetchPatientGoals() {
       try {
-        const response = await fetch(`/goal/patient/${currentPatientId}`);
+        const response = await fetch(`/avail/api/goal/${currentPatientId}`);
         goals = await response.json();
       } catch (error) {
         console.error('Error fetching patient goals:', error);
@@ -74,7 +74,7 @@
     // Handle form submission
     async function handleSubmit() {
       try {
-        const response = await fetch('/servicerequests/add', {
+        const response = await fetch('/avail/api/servicerequests/add', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

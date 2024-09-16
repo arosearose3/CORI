@@ -13,6 +13,9 @@ router.post('/add', async (req, res) => {
     const conditionData = req.body;
     conditionData.resourceType = 'Condition'; // Ensure resourceType is set
 
+    console.log('api Condition/add data to be added:', JSON.stringify(conditionData));
+  
+
     const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;
     const response = await healthcare.projects.locations.datasets.fhirStores.fhir.create({
       parent,
