@@ -8,9 +8,10 @@
   
   <div class="practitioner-container">
  
-    <AddPractitioner />
-    <IngestPractitioners /> 
     <AllPractitioners />  
+    <AddPractitioner />
+   <!-- <IngestPractitioners />  -->
+   
   
   </div>
   

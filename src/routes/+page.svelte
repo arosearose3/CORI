@@ -1,2 +1,2 @@
-<h1>ClinicMgr</h1>
+<h1>Cori - Colorado Referral Information</h1>
 

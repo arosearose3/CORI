@@ -335,40 +335,6 @@ app.get('/avail/api/allOrganizations', async (req, res) => {
 });
 
 
-app.put('/avail/api/updateRole', async (req, res) => {
-  if (!auth) {
-    return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
-  }
-
-  try {
-    const updatedRole = req.body;
-    const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;
-
-    // Validate the incoming PractitionerRole resource
-    if (updatedRole.resourceType !== 'PractitionerRole' || !updatedRole.id) {
-      return res.status(400).json({ error: 'Invalid PractitionerRole format' });
-    }
-
-    const response = await healthcare.projects.locations.datasets.fhirStores.fhir.update({
-      name: `${parent}/fhir/PractitionerRole/${updatedRole.id}`,
-      requestBody: updatedRole,
-      auth: auth
-    });
-
-    // Check if the update was successful
-    const result = await handleBlobResponse(response.data);
-    if (response.status === 200 || response.status === 201) {
-      res.json({ message: 'PractitionerRole updated successfully', data: result });
-    } else {
-      throw new Error('Failed to update PractitionerRole');
-    }
-  } catch (error) {
-    console.error('Error updating PractitionerRole:', error);
-    res.status(500).json({ error: 'Failed to update PractitionerRole', details: error.message });
-  }
-});
-
-
 app.get('/avail/api/allRoles', async (req, res) => {
   if (!auth) {
     return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
@@ -387,7 +353,7 @@ app.get('/avail/api/allRoles', async (req, res) => {
 
     const rolesData = await handleBlobResponse(rolesResponse.data);
 
-    console.log ("rolesData"+ JSON.stringify(rolesData, null, 2));
+    //console.log ("rolesData"+ JSON.stringify(rolesData, null, 2));
     let roles = [];
     if (rolesData && rolesData.entry && Array.isArray(rolesData.entry)) {
       roles = await Promise.all(rolesData.entry.map(async (entry) => {
@@ -433,46 +399,57 @@ app.get('/avail/api/allRoles', async (req, res) => {
   }
 });
 
-app.post('/avail/api/UpdateRole', async (req, res) => {
+app.put('/avail/api/updateRole', async (req, res) => {
   if (!auth) {
     return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
   }
 
   try {
-    const practitionerRoleResource = req.body;
+    const updatedRole = req.body;
 
-    // Ensure the resourceType is set to "PractitionerRole"
-    if (practitionerRoleResource.resourceType !== "PractitionerRole") {
+    // Validate that the resource is a PractitionerRole
+    if (updatedRole.resourceType !== 'PractitionerRole') {
+      console.log('Invalid resourceType:', updatedRole.resourceType);
       return res.status(400).json({ error: 'Invalid resource type. Must be PractitionerRole.' });
     }
 
-    // Ensure the resource has an id
-    if (!practitionerRoleResource.id) {
+    // Ensure the PractitionerRole resource has an ID
+    if (!updatedRole.id) {
+      console.log('PractitionerRole resource is missing id');
       return res.status(400).json({ error: 'PractitionerRole resource must have an id for updating.' });
     }
 
     const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;
-    const name = `${parent}/fhir/PractitionerRole/${practitionerRoleResource.id}`;
+    const name = `${parent}/fhir/PractitionerRole/${updatedRole.id}`;
 
-    console.log(`Attempting to update PractitionerRole with id: ${practitionerRoleResource.id}`);
-    console.log('PractitionerRole data:', JSON.stringify(practitionerRoleResource, null, 2));
+    console.log(`Attempting to update PractitionerRole with id: ${updatedRole.id}`);
+    console.log('Received PractitionerRole data:', JSON.stringify(updatedRole, null, 2));
 
+    // Perform the FHIR update using Google Healthcare API
     const response = await healthcare.projects.locations.datasets.fhirStores.fhir.update({
       name,
-      requestBody: practitionerRoleResource,
+      requestBody: updatedRole,
       auth: auth
     });
 
-    console.log('API Response:', JSON.stringify(response.data, null, 2));
+    // Log the response from the FHIR server
+    console.log('FHIR API Response:', JSON.stringify(response.data, null, 2));
 
-    res.status(200).json({
-      message: 'PractitionerRole updated successfully',
-      data: response.data
-    });
+    // Check if the update was successful
+    if (response.status === 200 || response.status === 201) {
+      res.status(200).json({
+        message: 'PractitionerRole updated successfully',
+        data: response.data
+      });
+    } else {
+      console.log('Unexpected response status:', response.status);
+      throw new Error('Failed to update PractitionerRole');
+    }
 
   } catch (error) {
     console.error('Error updating PractitionerRole:', error);
     console.error('Error details:', JSON.stringify(error.response?.data, null, 2));
+
     res.status(500).json({
       message: 'Failed to update PractitionerRole',
       error: error.message || 'Unknown error occurred',
@@ -482,22 +459,17 @@ app.post('/avail/api/UpdateRole', async (req, res) => {
 });
 
 
+
 app.get('/avail/api/GetPractitionersRoles', async (req, res) => {
   if (!auth) {
     return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
   }
-
   try {
     const { id } = req.query; // Get the Practitioner ID from query parameters
     if (!id) {
       return res.status(400).json({ error: 'Practitioner ID is required.' });
     }
-
-
-   // const practitionerId = '30904792-995a-4551-b185-657d8e4ea08e';
-
       const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;
-      
       const response = await healthcare.projects.locations.datasets.fhirStores.fhir.search({
         parent: parent,
         resourceType: "PractitionerRole", 
@@ -508,12 +480,6 @@ app.get('/avail/api/GetPractitionersRoles', async (req, res) => {
 
      // console.log("allRoles - rolesResponse"+ JSON.stringify(response.data, null, 2));
       const rolesData = await handleBlobResponse(response.data);
-      console.log ("rolesData"+ JSON.stringify(rolesData, null, 2));
-
-
-    //console.log ("response:"+JSON.stringify(response));
- 
-
 
     if (!rolesData.entry || rolesData.entry.length === 0) {
       return res.json({ message: 'No roles found for the given practitioner.', practitionerRoles: [] });
@@ -547,7 +513,7 @@ app.get('/avail/api/GetPractitionersRoles', async (req, res) => {
             id: organization.id,
             name: organization.name
           },
-          availabilityTimes: role.availabilityTime || []
+          availableTime: role.availableTime || []
         };
       }));
 

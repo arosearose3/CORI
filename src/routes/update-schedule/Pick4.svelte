@@ -13,43 +13,38 @@
       { label: 'Families', value: 0, singular: 'family', url: 'families' }
     ];
   
-    let capacityExtension = [
-      {
-        "url": "https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html",
-        "extension": []
-      }
-    ];
+    $: if (capacity) {
+      updateCategoriesFromCapacity(capacity);
+    }
   
-    onMount(() => {
-      if (capacity) {
-        capacityExtension = capacity;
-        updateCategoriesFromCapacity();
-      }
-    });
-  
-    function updateCategoriesFromCapacity() {
-      capacityExtension[0].extension.forEach(ext => {
-        const category = categories.find(cat => cat.url === ext.url);
-        if (category) {
-          category.value = ext.valueInteger;
-        }
+    function updateCategoriesFromCapacity(capacityData) {
+      console.log("Updating categories from capacity:", capacityData);
+      categories = categories.map(category => {
+        const matchingCapacity = capacityData.find(cap => cap.url === category.url);
+        return {
+          ...category,
+          value: matchingCapacity ? matchingCapacity.valueInteger : 0
+        };
       });
-      categories = categories; // Trigger reactivity
     }
   
     function updateCapacityExtension() {
-      capacityExtension[0].extension = categories.map(cat => ({
-        "url": cat.url,
-        "valueInteger": cat.value
-      }));
+      const capacityExtension = [
+        {
+          "url": "https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html",
+          "extension": categories.map(cat => ({
+            "url": cat.url,
+            "valueInteger": cat.value
+          }))
+        }
+      ];
       dispatch('capacitychange', { capacityExtension });
-      console.log("array: ", capacityExtension[0].extension);
     }
   
     function handleChange(index, event) {
       const newValue = parseInt(event.target.value);
       categories[index].value = newValue;
-      categories = categories;
+      categories = [...categories]; // Trigger reactivity
       updateCapacityExtension();
     }
   
@@ -70,10 +65,10 @@
   <div class="flex flex-col space-y-6 w-full max-w-3xl mx-auto">
     <p class="text-lg font-medium text-center">{summarySentence}</p>
   
-    {#each categories as category, i}
+    {#each categories as category, i (category.url)}
       <div class="flex flex-col mb-8">
-        <label class="mb-2 text-sm font-medium">{category.label}</label>
-        <div class="relative w-full pt-4 pb-4"> <!-- Added padding to make room for labels -->
+        <label class="mb-2 text-sm font-medium">{category.label} (Value: {category.value})</label>
+        <div class="relative w-full pt-4 pb-4">
           <div class="w-[90%] ml-[10%] relative">
             <span class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full pr-2.5 text-xs">0</span>
             
@@ -83,17 +78,15 @@
               max="5"
               step="1"
               bind:value={category.value}
-              on:change={(e) => handleChange(i, e)}
+              on:input={(e) => handleChange(i, e)}
               class="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
             />
             <span class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-2.5 text-xs">5+</span>
           </div>
-          <br>
         </div>
       </div>
     {/each}
   </div>
-  
   <style>
     input[type="range"] {
       -webkit-appearance: none;

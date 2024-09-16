@@ -59,7 +59,7 @@
       };
   
       try {
-        const response = await fetch('/avail/api/addPractitioner', {
+        const response = await fetch('/avail/api/practitioner/add', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -1,29 +1,20 @@
 <script>
     import AssociatePractitionersOrganizations from './AssociatePractitionersOrganizations.svelte';
+    import AssociatePractitionerPatient from './AssociatePractitionerPatient.svelte';
     import AllRoles from './AllRoles.svelte';
-    import { currentPractitioner } from '$lib/practitionerStore.js';
+  //  import { currentPractitioner } from '$lib/practitionerStore.js';
 
   </script>
   
-  <h1>Practitioner Roles</h1>
+  <h2>Practitioner Roles</h2>
 
-  {#if $currentPractitioner.practitioner.name && $currentPractitioner.organizationName}
-    <div>
-      Current Practitioner: {$currentPractitioner.practitioner.name}
-      <br>
-      Organization: {$currentPractitioner.organizationName}
-    </div>
-  {:else}
-    <div>No practitioner selected</div>
-  {/if}
-  
-  <p>Current Practitioner Details:</p>
-  <pre>{JSON.stringify($currentPractitioner, null, 2)}</pre>
-  
   <div class="practitioner-roles-container">
+    <AssociatePractitionersOrganizations />
+    <hr>
+    <AssociatePractitionerPatient />
     <div class="top-row">
-      <AllRoles />
-      <AssociatePractitionersOrganizations />
+      <!-- <AllRoles /> -->
+   
     </div>
     <div class="full-width">
     </div>

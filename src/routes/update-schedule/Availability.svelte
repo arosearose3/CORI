@@ -56,6 +56,7 @@
     const newAvailabilities = [];
     const newAllDayAvailability = { ...($allDayAvailability) };
 
+    console.log('Initial Availability:', initialAvailability);
     initialAvailability.forEach(avail => {
       if (avail.allDay) {
         newAllDayAvailability[avail.daysOfWeek[0]] = true;
@@ -96,7 +97,10 @@
 
   function handleResize() {
     updateGridDimensions();
+
+// Trigger re-render for both availabilities and all-day rectangles
     availabilities.update(avails => [...avails]);
+    allDayAvailability.update(allDay => ({ ...allDay }));
   }
 
   function updateGridDimensions() {
@@ -171,8 +175,13 @@
   }
 
   function calculateLeftPosition(dayIndex) {
-    return timeColumnWidth + (dayIndex * (cellWidth + GRID_GAP));
-  }
+   // return timeColumnWidth + (dayIndex * (cellWidth + GRID_GAP));
+  
+  console.log('timeColumnWidth:', timeColumnWidth);
+  console.log('cellWidth:', cellWidth);
+  return timeColumnWidth + (dayIndex * (cellWidth + GRID_GAP));
+}
+  
 
   function calculateTopPosition(hour) {
     return dayHeaderHeight + ((hour - GRID_START_HOUR) * (cellHeight + GRID_GAP/2));
@@ -291,7 +300,7 @@
   }
 </script>
 
-<div class="instructions">Use checkboxes to show all day availability.</div>
+<div class="instructions">v0.91 Use checkboxes to show all day availability.</div>
 
 <div class="grid" bind:this={gridElement}>
   <div class="header-row">
@@ -320,21 +329,7 @@
     {/each}
   </div>
 
-  {#each DAYS as day, dayIndex}
-    {#if $allDayAvailability[day]}
-      <div
-        class="avail-rect all-day"
-        style="
-          left: {calculateLeftPosition(dayIndex)}px;
-          top: {dayHeaderHeight}px;
-          width: {cellWidth}px;
-          height: {calculateFullDayHeight()}px;
-        "
-      >
-        <div class="time-display">All Day</div>
-      </div>
-    {/if}
-  {/each}
+
 
   {#each $availabilities as avail (avail.id)}
   {#if !$allDayAvailability[avail.day]}
@@ -360,6 +355,21 @@
       on:mousedown|stopPropagation={(e) => handleMouseDown(e, avail, 'end')}
     ></div>
     <button class="delete-btn" on:click|stopPropagation={() => deleteAvailability(avail.id)}>×</button>
+  </div>
+{/if}
+{/each}
+{#each DAYS as day, dayIndex}
+{#if $allDayAvailability[day]}
+  <div
+    class="avail-rect all-day"
+    style="
+      left: {calculateLeftPosition(dayIndex)}px;
+      top: {dayHeaderHeight}px;
+      width: {cellWidth}px;
+      height: {calculateFullDayHeight()}px;
+    "
+  >
+    <div class="time-display">All Day</div>
   </div>
 {/if}
 {/each}
@@ -531,6 +541,8 @@
   .avail-rect.all-day {
     background-color: rgba(0, 200, 0, 0.5);
     border: 1px solid rgb(0, 150, 0);
+    position: absolute;
+ 
   }
 
   .avail-rect.all-day .time-display {
