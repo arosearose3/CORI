@@ -5,13 +5,13 @@
   import Availability from './Availability.svelte';
 
   // Component state variables
-  let selectedRole = null;
+
   let capacityData = null;
   let availabilityData = null;
   let practitionerName = '';
   let updateMessage = '';
   let errorMessage = '';
-  let practitionerRole = null;
+  let practitionerRole = null; //this will be a JSON object with the PR
 
   export let currentPractitionerRoleId; // ID passed in from the parent component
 
@@ -23,27 +23,37 @@
   // Fetch PractitionerRole details from the server
   async function fetchPractitionerRole(practitionerRoleId) {
     try {
+      console.log ("in fetch 1");
       const response = await fetch(`/avail/api/role/PractitionerRole/${practitionerRoleId}`);
       const data = await response.json();
+      console.log ("in fetch 2 data:"+JSON.stringify(data));
 
-      if (data.resourceType === 'PractitionerRole') {
-        practitionerRole = data;
-        selectedRole = {
-          id: practitionerRole.id,
-          practitionerId: practitionerRole.practitioner?.reference.split('/')[1],
-          organizationId: practitionerRole.organization?.reference.split('/')[1],
-          availableTime: practitionerRole.availableTime || [],
-          capacity: practitionerRole.extension?.find(
-            (ext) =>
-              ext.url ===
-              'https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html'
-          )?.extension || [],
-        };
-        capacityData = selectedRole.capacity;
-        availabilityData = selectedRole.availableTime;
-        practitionerName = $user.practitioner.name || 'Unknown Practitioner';
+      // Check if the response is a Bundle and extract the PractitionerRole resource
+      if (data.resourceType === 'Bundle' && data.entry && data.entry.length > 0) {
+        const entry = data.entry[0]; // Get the first entry
+        if (entry.resource && entry.resource.resourceType === 'PractitionerRole') {
+          practitionerRole = entry.resource; // Extract the PractitionerRole resource
+          let roleInfo = {
+            id: practitionerRole.id,
+            practitionerId: practitionerRole.practitioner?.reference.split('/')[1],
+            organizationId: practitionerRole.organization?.reference.split('/')[1],
+            availableTime: practitionerRole.availableTime || [],
+            capacity: practitionerRole.extension?.find(
+              (ext) =>
+                ext.url ===
+                'https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html'
+            )?.extension || [],
+          };
+
+          console.log ("in fetch 3 roleInfo:"+JSON.stringify(roleInfo));
+          capacityData = roleInfo.capacity;
+          availabilityData = roleInfo.availableTime;
+          practitionerName = $user.practitioner.name || 'Unknown Practitioner';
+        } else {
+          errorMessage = 'Failed to retrieve PractitionerRole resource from the Bundle.';
+        }
       } else {
-        errorMessage = 'Failed to retrieve PractitionerRole.';
+        errorMessage = 'Failed to retrieve PractitionerRole. No matching entries found.';
       }
     } catch (error) {
       console.error('Error fetching PractitionerRole:', error);
@@ -90,36 +100,34 @@
   // Handle capacity change from Pick4 component
   function handleCapacityChange(event) {
     const { capacityExtension } = event.detail;
-    if (practitionerRole) {
       capacityData = capacityExtension[0].extension;
-    }
+    
   }
 
   // Handle availability update from Availability component
   function handleAvailabilityUpdate(event) {
     const newAvailability = event.detail;
-    if (practitionerRole) {
-      practitionerRole.availableTime = newAvailability;
       availabilityData = newAvailability;
-    }
   }
 </script>
 
 <hr>
 <div>
+  current PR: {currentPractitionerRoleId}<br>
   <h2>{practitionerName}'s Capacity and Availability</h2>
-  {#if selectedRole}
-    <h2>Editing Schedule for {selectedRole.organizationId}</h2>
+ 
+    <h2>Editing Schedule for {practitionerName}</h2>
     <button on:click={handleSubmit}>Submit</button>
     {#if updateMessage}
       <p>{updateMessage}</p>
+      
     {/if}
     <Pick4 on:capacitychange={handleCapacityChange} capacity={capacityData} />
     <hr />
     <Availability initialAvailability={availabilityData} on:availabilityUpdate={handleAvailabilityUpdate} />
-  {:else}
+
     <h3>{errorMessage}</h3>
-  {/if}
+  
 </div>
 
 <style>

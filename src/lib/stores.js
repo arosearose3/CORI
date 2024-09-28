@@ -5,8 +5,6 @@ import { AbilityBuilder, PureAbility } from '@casl/ability';
 const initialAbilities = new PureAbility([]);
 
 // Initial state for user and practitioner
-//user is data from google's auth for the user
-//practitioner is for FHIR Google store Id, and PractitionerRoleId
 const initialUserState = {
   user: {
     id: null,
@@ -21,14 +19,12 @@ const initialUserState = {
     organizationId: null,
     organizationName: null,
     availability: null,
-    capacity: null,
     PractitionerRoleId: null,
   },
 };
 
 // Function to create a writable store with persistent storage
 const createPersistentStore = (key, startValue) => {
-  // Initialize the writable store with the starting value
   const store = writable(startValue);
 
   if (typeof window !== 'undefined') { // Ensure code runs only on the client side
@@ -90,7 +86,7 @@ export function updateAbilities(userRoles) {
       console.log("Role 'supervisor': can view ProviderReferrals and manage Provenance");
     }
     if (userRoles.includes('provider')) {
-      can('view', 'Capacity')
+      can('view', 'Capacity');
       can('view', 'Settings');
       can('view', 'Consents');
       can('view', 'Notifications');
@@ -132,7 +128,6 @@ export function updateAbilities(userRoles) {
       can('view', 'Messages');
       console.log("Role 'client': various manage and view permissions");
     }
-    // Add more role-based permissions as needed
 
     const builtAbility = build();
     abilities.set(builtAbility);
@@ -186,6 +181,8 @@ export function setPractitioner(practitionerData) {
       availability: practitionerData.availability || null,
       PractitionerRoleId: practitionerData.PractitionerRoleId || null,
     };
+    console.log("Practitioner Store Updated:", store.practitioner);
+    console.log("Full Practitioner Object:", store.practitioner); // Log the full practitioner object
     return store;
   });
 }
@@ -211,6 +208,7 @@ export function clearFhirStore() {
       availability: null,
       PractitionerRoleId: null,
     };
+    console.log("Practitioner Store Cleared:", store.practitioner);
     return store;
   });
 }
@@ -223,5 +221,5 @@ export const actions = {
   setPractitioner,
   clearUserStore,
   clearFhirStore,
-  updateAbilities
-}; 
+  updateAbilities,
+};

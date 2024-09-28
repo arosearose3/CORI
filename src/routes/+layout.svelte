@@ -251,17 +251,19 @@
       const updatedStore = { ...store };
 
       // Add or update the 'practitioner' property separately
-      updatedStore.user = {
-        ...store.user,
-        practitioner: {
+      updatedStore.practitioner = {
+       
           id: selectedRole.practitioner?.reference?.split('/')[1] || null,
           name: practitionerName || null,
           organizationId: selectedRole.organization?.reference?.split('/')[1] || null,
           organizationName: selectedRole.organization?.display || 'Organization',
           availability: selectedRole.availability || null,
           PractitionerRoleId: selectedRole.id || null,
-        }
+        
       };
+
+      console.log('Practitioner Store Updated:', updatedStore.practitioner); // Debugging log to verify updates
+ 
 
       return updatedStore;
     });

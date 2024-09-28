@@ -1,24 +1,38 @@
 <script>
+  import { onMount } from 'svelte';
   import { user } from '$lib/stores.js';
   import UpdateSchedule from './UpdateSchedule.svelte';
 
-  let currentPractitionerRoleId = null;  //this is going to be a JSON object 
+  let currentPractitionerRoleId = null;
   let practitionerId = null;
   let isLoading = true;
 
+  // Subscribe to the user store to access practitioner data
+  let unsubscribeUser;
 
-  // Reactive statement to get user data from the nested 'user' property
-  $: userData = $user.user;
-
-  // Check if practitioner data is available and set practitionerId
-  $: if (userData && userData.practitioner) {
-    practitionerId = userData.practitioner.id;
-    currentPractitionerRoleId = userData.PractitionerRoleId;
-    isLoading = false;
-    console.log('Practitioner data found. practitionerId set to:', practitionerId);
-  } else {
-    console.warn('User or practitioner data is not available.');
+  // Function to set practitioner data once it is available
+  function setPractitionerData(value) {
+    if (value && value.practitioner && value.practitioner.id) {
+      practitionerId = value.practitioner.id;
+      currentPractitionerRoleId = value.practitioner.PractitionerRoleId;
+      isLoading = false;
+      console.log('Practitioner data loaded:', value.practitioner);
+    } else {
+      console.warn('User or practitioner data is not available.');
+    }
   }
+
+  // Subscribe to the store and handle data changes
+  onMount(() => {
+    unsubscribeUser = user.subscribe(value => {
+      setPractitionerData(value);
+    });
+
+    return () => {
+      // Unsubscribe when component is destroyed to avoid memory leaks
+      if (unsubscribeUser) unsubscribeUser();
+    };
+  });
 </script>
 
 <hr>
@@ -29,7 +43,8 @@
 {:else}
   <!-- Display the practitioner ID for debugging -->
   <p>Practitioner ID: {practitionerId}</p>
+  <p>currentPractitionerRoleId: {currentPractitionerRoleId}</p>
   <!-- Render the UpdateSchedule component once practitionerId is loaded -->
-  <UpdateSchedule currentPractitionerRoleId={currentPractitionerRoleId} />
+  <UpdateSchedule currentPractitionerRoleId={currentPractitionerRoleId} /> 
 {/if}
 <hr>
