@@ -1,75 +1,84 @@
+<!-- src/components/Layout.svelte -->
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { user, abilities } from '$lib/stores.js';
   import { updateAbilities } from '$lib/stores.js';
+
   import {
     initFhirAuth,
     handleFhirAuth,
     checkAuthStatus as checkFhirAuthStatus,
     authError as fhirAuthError,
-    disconnectFhirAuth,
+    disconnectFhirAuth
   } from '$lib/auth/googleFhirAuth.js';
-  import { Ability } from '@casl/ability';
+  
+  import { Ability, AbilityBuilder } from '@casl/ability';
   import { goto } from '$app/navigation';
-  import Navigation from './Navigation.svelte';
-
+  import Navigation from '../src/routes/Navigation.svelte';
+  import DebugSection from '../src/routes/DebugSection.svelte';
+  import { navItems } from '$lib/navConfig.js'; // Import navConfig.js
+  
+  // State Variables
   let userData = null;
   let ability = null;
   let isFhirAuthenticated = false;
   let fhirError = null;
   let practitionerId = null;
   let practitionerName = null;
-  let practitionerRoles = []; // Array of PractitionerRole objects
-  let selectedRole = null; // The selected PractitionerRole object
-  let userRoles = []; // Array of role strings defining user abilities
-  let organizations = []; // List of organizations extracted from PractitionerRoles
-  let hasFetchedPractitionerData = false;
-  let fetchError = null;
-  let isInitializing = true;
-  let isFetchingPractitioner = false;
-  let showRoleSelection = false; // Controls the visibility of the role selection UI
+  let practitionerRoles = []; // Array of PractitionerRole resources
+  let selectedRole = null;
+  let roles = [];
+  let organizations = [];
+  let hasFetchedPractitionerData = false; // Flag to prevent redundant fetching
+  let fetchError = null; // User-facing error message
+  let isInitializing = true; // Loading state for initialization
+  let isFetchingPractitioner = false; // Loading state for fetching practitioner data
 
-  // Determine if the user is authenticated based on user data
+  // Derived State
   $: isUserAuthenticated = !!userData?.id;
 
-  // Reset practitioner-related data
+  // Function to reset practitioner-related data
   function resetPractitionerData() {
     practitionerId = null;
     practitionerName = null;
     practitionerRoles = [];
     selectedRole = null;
-    userRoles = [];
+    roles = [];
     organizations = [];
     hasFetchedPractitionerData = false;
   }
 
-  // Subscribe to abilities store to keep track of user abilities
+
+
+  // Update ability based on userData and set abilities store
   const unsubscribeAbilities = abilities.subscribe(value => {
     ability = value;
   });
 
-  // Subscribe to user store to manage authentication and fetch related data
+  // Subscriptions to stores
   const unsubscribeUser = user.subscribe(async value => {
     userData = value?.user || null;
 
     if (isUserAuthenticated && userData?.email && !hasFetchedPractitionerData) {
       isFetchingPractitioner = true;
       await fetchPractitionerData(userData.email);
-      hasFetchedPractitionerData = true;
+      hasFetchedPractitionerData = true; // Set flag to prevent re-fetching
       isFetchingPractitioner = false;
     } else if (!isUserAuthenticated) {
-      resetPractitionerData();
-      abilities.set(new Ability([]));
+      resetPractitionerData(); // Reset data when user is not authenticated
+      abilities.set(new Ability([])); // Clear abilities
     }
+
+    
+    // Abilities are already managed in stores.js via setUser and updateAbilities
   });
 
-  // Subscribe to FHIR authentication error store
   const unsubscribeFhirError = fhirAuthError.subscribe(value => {
     fhirError = value;
     isFhirAuthenticated = !value;
   });
 
-  // Initialize FHIR authentication on component mount
+  // Initialize FHIR authentication on mount
   onMount(async () => {
     try {
       await initFhirAuth();
@@ -82,22 +91,23 @@
     }
   });
 
-  // Clean up subscriptions on component destroy
+  // Cleanup subscriptions on destroy
   onDestroy(() => {
     unsubscribeUser();
     unsubscribeAbilities();
     unsubscribeFhirError();
   });
 
+  // Authentication Handlers
   async function handleLogin() {
     await handleFhirAuth();
   }
 
   async function handleLogout() {
     await disconnectFhirAuth();
-    resetPractitionerData();
-    abilities.set(new Ability([]));
-    goto('/avail');
+    resetPractitionerData(); // Ensure data is reset on logout
+    abilities.set(new Ability([])); // Clear abilities
+    goto('avail'); // Redirect after logout
   }
 
   async function handleConnectFhir() {
@@ -120,8 +130,9 @@
       const response = await fetch(`/avail/api/practitioner/findWithEmail?email=${encodeURIComponent(email)}`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'
+          // Include authentication headers if required
+        }
       });
 
       if (response.ok) {
@@ -155,28 +166,59 @@
       const response = await fetch(`/avail/api/role/PractitionerRole?practitioner=${encodeURIComponent(practitionerId)}`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'
+          // Include authentication headers if required
+        }
       });
 
       if (response.ok) {
         const bundle = await response.json();
+
+        // Ensure the bundle has an 'entry' array
         const entries = Array.isArray(bundle.entry) ? bundle.entry : [];
 
-        // Extract PractitionerRole objects
+        // Extract PractitionerRole resources from the bundle
         practitionerRoles = entries
           .map(entry => entry.resource)
           .filter(resource => resource.resourceType === 'PractitionerRole');
 
-        // If more than one PractitionerRole, show the selection UI
-        if (practitionerRoles.length > 1) {
-          showRoleSelection = true;
-        } else if (practitionerRoles.length === 1) {
-          // Automatically select if only one PractitionerRole is found
-          selectPractitionerRole(practitionerRoles[0]);
-        } else {
+        if (practitionerRoles.length === 0) {
           console.error('No PractitionerRole resources found.');
           fetchError = 'No roles found for the practitioner.';
+          return;
+        }
+
+        // Extract organizations from PractitionerRoles
+        organizations = practitionerRoles.map(role => ({
+          id: role.organization?.reference?.split('/')[1] || null,
+          name: role.organization?.display || 'Unknown Organization'
+        }));
+
+        // Extract unique roles from PractitionerRoles
+        const extractedRoles = practitionerRoles.flatMap(role => {
+          // Assuming each PractitionerRole has a 'code' array with coding objects containing role codes
+          if (Array.isArray(role.code)) {
+            return role.code.flatMap(c => c.coding?.map(codeObj => codeObj.code) || []);
+          }
+          return [];
+        });
+
+        // Remove duplicates and assign to roles
+        roles = [...new Set(extractedRoles)];
+
+        // Update userData.roles with extracted roles
+        user.update(store => {
+          const updatedStore = { ...store };
+          updatedStore.user = { ...store.user, roles: roles };
+          return updatedStore;
+        });
+
+        // Update abilities based on the new roles
+        updateAbilities(roles);
+
+        // Automatically select the first role if there's only one
+        if (practitionerRoles.length === 1) {
+          selectPractitionerRole(practitionerRoles[0]);
         }
       } else {
         throw new Error('Failed to fetch practitioner roles');
@@ -188,52 +230,51 @@
   }
 
   /**
-   * Handle selection of a specific PractitionerRole and update the store.
+   * Set the selected PractitionerRole and update user store accordingly.
    * @param {Object} role - Selected PractitionerRole object.
    */
   function selectPractitionerRole(role) {
     selectedRole = role;
 
-    // Extract the roles strings from the selected PractitionerRole
-    userRoles = (role.code || [])
-      .flatMap(c => (c.coding || []).map(code => code.code))
-      .filter(code => code);
+    // Safely extract role codes
+    if (Array.isArray(role.code)) {
+      roles = role.code
+        .flatMap(item => (Array.isArray(item.coding) ? item.coding.map(coding => coding.code) : []))
+        .filter(code => code); // Remove any undefined or null codes
+    } else {
+      roles = [];
+    }
 
-    // Update the practitioner-related data in the user store
-    updatePractitionerStore(role);
-
-    // Update abilities based on the extracted roles
-    updateAbilities(userRoles);
-
-    // Hide the role selection UI
-    showRoleSelection = false;
-  }
-
-  /**
-   * Update the user store with the selected PractitionerRole.
-   * @param {Object} role - The selected PractitionerRole object.
-   */
-  function updatePractitionerStore(role) {
+    // Update the store with selected PractitionerRole without altering authentication properties
     user.update(store => {
+      // Clone the existing user object to prevent unintended mutations
       const updatedStore = { ...store };
+
+      // Add or update the 'practitioner' property separately
       updatedStore.practitioner = {
-        id: role.practitioner?.reference?.split('/')[1] || null,
-        name: practitionerName || null,
-        organizationId: role.organization?.reference?.split('/')[1] || null,
-        organizationName: role.organization?.name || 'Organization',
-        availability: role.availability || null,
-        PractitionerRoleId: role.id || null,
+       
+          id: selectedRole.practitioner?.reference?.split('/')[1] || null,
+          name: practitionerName || null,
+          organizationId: selectedRole.organization?.reference?.split('/')[1] || null,
+          organizationName: selectedRole.organization?.display || 'Organization',
+          availability: selectedRole.availability || null,
+          PractitionerRoleId: selectedRole.id || null,
+        
       };
 
-      console.log('Practitioner Store Updated:', updatedStore.practitioner);
+      console.log('Practitioner Store Updated:', updatedStore.practitioner); // Debugging log to verify updates
+ 
+
       return updatedStore;
     });
+
+    // Abilities are automatically updated via stores.js when user.roles are updated
   }
 </script>
 
 <div class="app-container">
   <aside class="sidebar">
-      <div class="sidebar-logo-container">
+    <div class="sidebar-logo-container">
       <img src="/avail/apple-touch-icon.png" alt="Logo" class="sidebar-logo" />
 
       
@@ -243,8 +284,8 @@
         Information
       </div>
     </div>
-
-    <Navigation
+   
+    <Navigation 
       isUserAuthenticated={isUserAuthenticated}
       practitionerId={practitionerId}
       practitionerName={practitionerName}
@@ -258,9 +299,13 @@
       isFhirAuthenticated={isFhirAuthenticated}
       fhirError={fhirError}
     />
+    
   </aside>
 
   <main class="main-content">
+    <hr>slot
+    <slot></slot>
+    endofslot<hr> 
     {#if isInitializing}
       <p>Initializing application, please wait...</p>
     {:else if isFetchingPractitioner}
@@ -269,46 +314,49 @@
       <div class="error-message">{fetchError}</div>
     {:else if !isUserAuthenticated}
       <p>Please log in to access the content.</p>
+ 
     {/if}
 
-    <!-- Display role selection UI if multiple PractitionerRoles are available -->
-    {#if showRoleSelection}
-      <div class="role-selection">
-        <h3>Choose an Organization</h3>
-        <ul>
-          {#each practitionerRoles as role}
-            <li>
-              <button on:click={() => selectPractitionerRole(role)}>
-                {role.organization?.display || 'Unknown Organization'}
-              </button>
-            </li>
-          {/each}
-        </ul>
-      </div>
-    {/if}
-
-    <!-- Display selected roles if a PractitionerRole is chosen -->
+    <!-- Display selected roles -->
     {#if selectedRole}
       <div class="role-info">
-
-        <h3>{userData.user.name}'s roles at {userData.practitioner.organizationName}:</h3>
+        <h3>Roles for Selected PractitionerRole</h3>
         <ul>
-          {#each userRoles as role}
+          {#each roles as role}
             <li>{role}</li>
           {/each}
         </ul>
       </div>
     {/if}
-    <hr> slot top<hr>
-    <slot></slot>
-    <hr>slot bottom <hr>
   </main>
+
+<!--   {#if process.env.NODE_ENV === 'development'}
+    <DebugSection 
+      isUserAuthenticated={isUserAuthenticated}
+      practitionerId={practitionerId}
+      practitionerName={practitionerName}
+      practitionerRoles={practitionerRoles}
+      organizations={organizations}
+      selectPractitionerRole={selectPractitionerRole}
+      ability={ability}
+      handleLogin={handleLogin}
+      handleLogout={handleLogout}
+      handleConnectFhir={handleConnectFhir}
+      handleDisconnectFhir={handleDisconnectFhir}
+      isFhirAuthenticated={isFhirAuthenticated}
+      fhirError={fhirError}
+      userData={userData}
+    />
+  {/if} -->
 </div>
+
+
 
 <style>
   .app-container {
     display: flex;
     height: 100vh;
+ 
   }
 
   .sidebar {
@@ -320,7 +368,7 @@
     align-items: flex-start;
     border-right: 1px solid #ddd;
     overflow-y: auto;
-    height: 100vh;
+    height: 100vh; /* Full viewport height */
     box-sizing: border-box;
   }
 
@@ -332,11 +380,18 @@
   }
 
   .sidebar-logo {
-    width: 60px; /* Adjust size as needed */
+    width: 80px; /* Adjust size as needed */
     height: auto;
     margin-bottom: 10px;
   }
 
+  .sidebar-title {
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 1.2;
+    color: #333;
+  }
 
   .main-content {
     flex: 1;
@@ -350,36 +405,51 @@
     margin-top: 10px;
   }
 
-  .role-selection {
+  .role-info {
     margin-top: 20px;
   }
 
-  .role-selection h3 {
+  .role-info h3 {
     margin-bottom: 10px;
   }
 
-  .role-selection ul {
+  .role-info ul {
     list-style: none;
     padding: 0;
   }
 
-  .role-selection li {
+  .role-info li {
     margin-bottom: 5px;
   }
 
-  .role-selection button {
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    background-color: #f0f0f0;
-    border: 1px solid #ccc;
-    cursor: pointer;
-    width: 100%;
-    text-align: left;
+  .debug-section {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #eef;
+    border: 1px solid #99c;
     border-radius: 4px;
-    transition: background-color 0.3s;
+    overflow-y: auto;
+    max-height: 300px;
   }
 
-  .role-selection button:hover {
-    background-color: #e0e0e0;
+  .debug-section h3 {
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #333;
+  }
+
+  .debug-section ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .debug-section li {
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #555;
+  }
+
+  .debug-section strong {
+    color: #000;
   }
 </style>

@@ -64,6 +64,7 @@
 
       if (response.ok) {
         organizations = await response.json();
+    
         generalError = null;
         retryCount = 0; // Reset retry count on success
         fetchFailed = false; // Reset fetch failure flag
@@ -94,6 +95,7 @@
 
 <!-- Page Content -->
 start of orgs page<hr>
+
 <SetUserRoles />
 <hr>
 <AddOrganization />

@@ -1,9 +1,9 @@
 <script>
   import { onMount } from 'svelte';
 
-  // State variables for practitioners, organizations, associations, and roles
+   let organizations = [];
+
   let practitioners = [];
-  let organizations = [];
   let selectedPractitioner = null;
   let selectedOrganization = null;
   let roles = [
@@ -17,19 +17,39 @@
   ];
   let message = '';
 
-  // Fetch practitioners and organizations when the component is mounted
-  onMount(async () => {
-    await fetchPractitioners();
-    await fetchOrganizations();
+  // Log organizations on mount
+  onMount(() => {
+    console.log('Received organizations in SetUserRoles:', organizations);
+    fetchPractitioners();
+    fetchOrganizations();
   });
 
-  // Function to fetch practitioners and transform the FHIR response
+  async function fetchOrganizations() {
+    try {
+      const response = await fetch('/avail/api/organization/all');
+      const data = await response.json();
+
+      // Check if the response is an array of organizations
+      if (Array.isArray(data)) {
+        organizations = data.map(organization => ({
+          id: organization.id || '',
+          name: organization.name || 'Unnamed Organization',
+        }));
+      } else {
+        throw new Error('Invalid Organization format');
+      }
+    } catch (error) {
+      console.error('Error fetching organizations:', error);
+      message = 'Error fetching organizations. Please try again.';
+    }
+  }
+
+  // Fetch practitioners function
   async function fetchPractitioners() {
     try {
       const response = await fetch('/avail/api/practitioner/all');
       const data = await response.json();
 
-      // Check if the response is a FHIR bundle and has entries
       if (data.resourceType === 'Bundle' && Array.isArray(data.entry)) {
         practitioners = data.entry.map(entry => {
           const practitioner = entry.resource;
@@ -47,31 +67,7 @@
     }
   }
 
-  // Function to fetch organizations and transform the FHIR response
-  async function fetchOrganizations() {
-    try {
-      const response = await fetch('/avail/api/organization/all');
-      const data = await response.json();
-
-      // Check if the response is a FHIR bundle and has entries
-      if (data.resourceType === 'Bundle' && Array.isArray(data.entry)) {
-        organizations = data.entry.map(entry => {
-          const organization = entry.resource;
-          return {
-            id: organization.id || '',
-            name: organization.name || 'Unnamed Organization',
-          };
-        });
-      } else {
-        throw new Error('Invalid Organization FHIR Bundle format');
-      }
-    } catch (error) {
-      console.error('Error fetching organizations:', error);
-      message = 'Error fetching organizations. Please try again.';
-    }
-  }
-
-  // Function to handle the form submission and update practitioner roles
+  // Handle form submission
   async function handleSubmit() {
     if (!selectedPractitioner || !selectedOrganization) {
       alert('Please select a Practitioner and an Organization.');
@@ -86,23 +82,18 @@
     }
 
     try {
-      const practitionerRole = {
-        resourceType: 'PractitionerRole',
-        practitioner: {
-          reference: `Practitioner/${selectedPractitioner.id}`,
-        },
-        organization: {
-          reference: `Organization/${selectedOrganization.id}`,
-        },
+      const body = {
+        practitioner: { reference: `Practitioner/${selectedPractitioner.id}` },
+        organization: { reference: `Organization/${selectedOrganization.id}` },
         roles: selectedRoles,
       };
 
-      const response = await fetch('/avail/api/role/updateRoles', {
-        method: 'POST',
+      const response = await fetch('/avail/api/role/patchRoles', {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(practitionerRole),
+        body: JSON.stringify(body),
       });
 
       const result = await response.json();
@@ -119,11 +110,11 @@
     }
   }
 
-  // Function to reset the form and clear selections
+  // Reset form
   function resetForm() {
     selectedPractitioner = null;
     selectedOrganization = null;
-    roles.forEach(role => role.selected = false);
+    roles.forEach(role => (role.selected = false));
   }
 </script>
 
@@ -211,7 +202,8 @@
     margin-top: 20px;
   }
 
-  th, td {
+  th,
+  td {
     border: 1px solid #ddd;
     padding: 8px;
     text-align: left;

@@ -1,6 +1,6 @@
 <script>
   import { writable, derived } from 'svelte/store';
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -50,9 +50,14 @@
     dispatch('availabilityUpdate', $fhirAvailability);
   }
 
-  onMount(() => {
+  onDestroy(() => {
+  console.log("onDestroy fired");
+});
 
-    if (initialAvailability.length > 0) {
+  onMount(() => {
+console.log ("in Avail, onMount, initialAvail:"+JSON.stringify(initialAvailability));
+
+    if (initialAvailability) { if (initialAvailability.length > 0) {
     const newAvailabilities = [];
     const newAllDayAvailability = { ...($allDayAvailability) };
 
@@ -74,8 +79,11 @@
 
     availabilities.set(newAvailabilities);
     allDayAvailability.set(newAllDayAvailability);
-  }
 
+    }
+  }
+  
+    console.log ("in Avail, onMount, 2");
     updateGridDimensions();
     window.addEventListener('resize', handleResize);
     window.addEventListener('mousemove', handleMouseMove);

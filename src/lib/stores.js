@@ -11,7 +11,7 @@ const initialUserState = {
     email: null,
     name: null,
     picture: null,
-    roles: [],
+  
   },
   practitioner: {
     id: null,
@@ -20,6 +20,7 @@ const initialUserState = {
     organizationName: null,
     availability: null,
     PractitionerRoleId: null,
+    roles: [],
   },
 };
 

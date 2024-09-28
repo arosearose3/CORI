@@ -58,6 +58,11 @@
       valid = false;
     }
 
+    if (!contact.telecom[2].value) {
+      errors.email = "Fax is required.";
+      valid = false;
+    }
+
     if (!contact.address.line[0]) {
       errors.addressLine = "Address line is required.";
       valid = false;
@@ -179,6 +184,12 @@
         Email:
         <input type="email" bind:value={organizationData.contact[0].telecom[1].value}>
         {#if errors.email}<span class="error">{errors.email}</span>{/if}
+      </label>
+
+      <label>
+        Fax:
+        <input type="fax" bind:value={organizationData.contact[0].telecom[2].value}>
+        {#if errors.fax}<span class="error">{errors.fax}</span>{/if}
       </label>
 
       <fieldset>

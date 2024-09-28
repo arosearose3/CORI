@@ -23,13 +23,35 @@
   // Fetch PractitionerRole details from the server
   async function fetchPractitionerRole(practitionerRoleId) {
     try {
-      console.log ("in fetch 1");
-      const response = await fetch(`/avail/api/role/PractitionerRole/${practitionerRoleId}`);
+      console.log ("in fetch 1 PRid:"+practitionerRoleId);
+
+
+      const response = await fetch(`/avail/api/role/getOne?id=${practitionerRoleId}`);
       const data = await response.json();
       console.log ("in fetch 2 data:"+JSON.stringify(data));
 
+      if (data.resourceType === 'PractitionerRole') {
+        practitionerRole = data; // Extract the PractitionerRole resource
+          const roleInfo = {
+            id: practitionerRole.id,
+            practitionerId: practitionerRole.practitioner?.reference.split('/')[1],
+            organizationId: practitionerRole.organization?.reference.split('/')[1],
+            availableTime: practitionerRole.availableTime || [],
+            capacity: practitionerRole.extension?.find(
+              (ext) =>
+                ext.url ===
+                'https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html'
+            )?.extension || [],
+          };
+
+          console.log("Direct PractitionerRole retrieved:", JSON.stringify(roleInfo));
+      capacityData = roleInfo.capacity;
+      availabilityData = roleInfo.availableTime;
+      practitionerName = $user.practitioner.name || 'Unknown Practitioner';
+
+    }
       // Check if the response is a Bundle and extract the PractitionerRole resource
-      if (data.resourceType === 'Bundle' && data.entry && data.entry.length > 0) {
+      else if (data.resourceType === 'Bundle' && data.entry && data.entry.length > 0) {
         const entry = data.entry[0]; // Get the first entry
         if (entry.resource && entry.resource.resourceType === 'PractitionerRole') {
           practitionerRole = entry.resource; // Extract the PractitionerRole resource
@@ -45,11 +67,12 @@
             )?.extension || [],
           };
 
-          console.log ("in fetch 3 roleInfo:"+JSON.stringify(roleInfo));
-          capacityData = roleInfo.capacity;
-          availabilityData = roleInfo.availableTime;
-          practitionerName = $user.practitioner.name || 'Unknown Practitioner';
-        } else {
+          console.log("Bundle PractitionerRole retrieved:", JSON.stringify(roleInfo));
+        capacityData = roleInfo.capacity;
+        availabilityData = roleInfo.availableTime;
+        practitionerName = $user.practitioner.name || 'Unknown Practitioner';
+
+      }else {
           errorMessage = 'Failed to retrieve PractitionerRole resource from the Bundle.';
         }
       } else {
@@ -77,7 +100,7 @@
         };
       }
 
-      const response = await fetch('/patchCapacity', {
+      const response = await fetch('/avail/api/role/patchCapacity', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -95,7 +118,33 @@
       console.error('Error updating capacity:', error.message);
       errorMessage = 'Error updating capacity.';
     }
+
+    //now patch Availability
+     // Handle patching availability
+     try{
+     if (availabilityData && availabilityData.length > 0) {
+      const availabilityResponse = await fetch('/avail/api/role/patchAvailability', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          practitionerRole,
+          availableTime: availabilityData,
+        }),
+      });
+
+      if (!availabilityResponse.ok) throw new Error('Failed to update the availability.');
+
+      const availabilityDataResponse = await availabilityResponse.json();
+      updateMessage += ' and availability'; // Update message for both patches
+      console.log('Successfully updated availability:', availabilityDataResponse);
+    } else {
+      console.log('No availability data to update.');
+    }
+  } catch (error) {
+    console.error('Error updating capacity or availability:', error.message);
+    errorMessage = 'Error updating capacity or availability.';
   }
+}
 
   // Handle capacity change from Pick4 component
   function handleCapacityChange(event) {
@@ -120,7 +169,7 @@
     <button on:click={handleSubmit}>Submit</button>
     {#if updateMessage}
       <p>{updateMessage}</p>
-      
+
     {/if}
     <Pick4 on:capacitychange={handleCapacityChange} capacity={capacityData} />
     <hr />

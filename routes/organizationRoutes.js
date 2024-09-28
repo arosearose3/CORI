@@ -1,13 +1,11 @@
-import express from 'express';
+import express, { response } from 'express';
 import { auth, healthcare, PROJECT_ID, LOCATION, DATASET_ID, FHIR_STORE_ID, handleBlobResponse } from '../serverutils.js';
 import axios from 'axios';
 import { google } from 'googleapis';  // Assuming you use Google API for authentication
 import { getFhirAccessToken } from '../src/lib/auth/auth.js'; // Adjust the path as needed
 
 const router = express.Router();
-
 const FHIR_BASE_URL = `https://healthcare.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}/fhir`;
-
 
 
 // Add a new Organization
@@ -15,26 +13,31 @@ router.post('/add', async (req, res) => {
   if (!auth) {
     return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
   }
-
   try {
     const organizationData = req.body;
     organizationData.resourceType = 'Organization';
 
+    const createUrl = `${FHIR_BASE_URL}/Organization`;
+    const accessToken = await getFhirAccessToken();
+
+    console.log ("org/add createUrl:"+createUrl);
     console.log ("org/add data:"+JSON.stringify(organizationData));
 
-    const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;
-
-    const response = await healthcare.projects.locations.datasets.fhirStores.fhir.create({
-      parent,
-      type: 'Organization',
-      requestBody: organizationData,
-      auth: auth,
+    const createResponse = await axios.post(createUrl, organizationData, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/fhir+json',
+      },
     });
 
-    res.status(201).json({ message: 'Organization added successfully', data: response.data });
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to add organization', error: error.message });
+    console.log ("org/add response:"+createResponse.data);
+    console.log ("org/add jresponse:"+JSON.stringify(createResponse.data));
+
+    res.status(201).json({ message: 'Organization added successfully', data: createResponse.data });
   }
+   catch (error) {
+    res.status(500).json({ message: 'Failed to add organization', error: error.message });
+   }
 });
 
 // Get all Organizations

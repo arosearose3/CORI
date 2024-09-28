@@ -1,16 +1,12 @@
 <script>
-  //
-  // to-do. the update requires a complete Resource, 
-  // including id, which won't be there if there's no PractRole object yet
-  // consider update/create
-  //  - so update needs to also preserve the Roles extension
-  
-
   import { onMount } from 'svelte';
 
   let practitioners = [];
   let organizations = [];
-  let associations = [];
+  let practitionerRoles = [];
+  let selectedPractitioner = null;
+  let availableOrganizations = [];
+  let selectedOrganizationId = null; // Declare selectedOrganizationId
   let message = '';
 
   // Fetch practitioners and organizations when the component is mounted
@@ -43,7 +39,7 @@
     }
   }
 
-  // Function to fetch organizations and handle the current array response
+  // Function to fetch all organizations
   async function fetchOrganizations() {
     try {
       const response = await fetch('/avail/api/organization/all');
@@ -51,9 +47,9 @@
 
       // Check if the response is an array of organizations
       if (Array.isArray(data)) {
-        organizations = data.map(organization => ({
-          id: organization.id || '',
-          name: organization.name || 'Unnamed Organization',
+        organizations = data.map(org => ({
+          id: org.id || '',
+          name: org.name || 'Unnamed Organization',
         }));
       } else {
         throw new Error('Invalid Organization format');
@@ -64,92 +60,136 @@
     }
   }
 
-  // Function to add a new practitioner-organization association
-  function addAssociation() {
-    associations = [...associations, { practitionerId: '', organizationId: '' }];
+  // Fetch PractitionerRoles for the selected practitioner
+  async function fetchPractitionerRoles(practitionerId) {
+    try {
+      const response = await fetch(`/avail/api/role/PractitionerRole?practitioner=Practitioner/${practitionerId}`);
+      const data = await response.json();
+
+      // Check if the response is a FHIR bundle and has entries
+      if (data.resourceType === 'Bundle' && Array.isArray(data.entry)) {
+        practitionerRoles = data.entry.map(entry => {
+          const role = entry.resource;
+          return {
+            id: role.id,
+            practitionerName: selectedPractitioner.displayName,
+            organization: {
+              id: role.organization?.reference?.split('/')[1] || '',
+              name: role.organization?.display || 'Unknown Organization',
+            },
+          };
+        });
+
+        // Filter out already associated organizations for the dropdown
+        updateAvailableOrganizations();
+      } else {
+        practitionerRoles = [];
+        message = 'No associated organizations found for this practitioner.';
+      }
+    } catch (error) {
+      console.error('Error fetching PractitionerRoles:', error);
+      message = 'Error fetching PractitionerRoles. Please try again.';
+    }
   }
 
-  // Function to remove an association from the list
-  function removeAssociation(index) {
-    associations = associations.filter((_, i) => i !== index);
+  // Update available organizations for selection
+  function updateAvailableOrganizations() {
+    const associatedOrganizationIds = new Set(practitionerRoles.map(role => role.organization.id));
+    availableOrganizations = organizations.filter(org => !associatedOrganizationIds.has(org.id));
   }
 
-  // Function to handle the form submission and update practitioner roles
-  // Client-side code: Corrected handleSubmit function
-async function handleSubmit() {
+  // Handle practitioner selection
+  function handlePractitionerChange() {
+    if (selectedPractitioner) {
+      fetchPractitionerRoles(selectedPractitioner.id);
+    } else {
+      practitionerRoles = [];
+      availableOrganizations = [];
+    }
+  }
+
+  // Function to handle adding a new association
+  async function addAssociation(organizationId) {
+  if (!selectedPractitioner || !organizationId) {
+    alert('Please select both a Practitioner and an Organization.');
+    return;
+  }
+
+  const organization = availableOrganizations.find(org => org.id === organizationId);
+  if (!organization) {
+    alert('Selected organization not found.');
+    return;
+  }
+
   try {
-    const practitionerRoles = associations.map(assoc => ({
-      resourceType: 'PractitionerRole',
-      practitioner: {
-        reference: `Practitioner/${assoc.practitionerId}`,
-      },
-      organization: {
-        reference: `Organization/${assoc.organizationId}`,
-      },
-      active: true,
-    }));
-
-    // Ensure the method is PUT, and stringify the JSON body
-    const response = await fetch('/avail/api/role/update', {
-      method: 'PUT', // Ensure this matches the server-side endpoint
+    // Send the request to create a new PractitionerRole
+    const response = await fetch(`/avail/api/role/create`, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(practitionerRoles), // Properly stringify the body
+      body: JSON.stringify({
+        practitionerId: selectedPractitioner.id,
+        organizationId: organizationId,
+      }),
     });
 
-    const result = await response.json();
+    // Parse the response data
+    const data = await response.json();
 
-    if (response.ok) {
-      message = 'Associations updated successfully';
-      associations = [];
+    // Check if the response was successful
+    if (response.ok && data.message === 'PractitionerRole created successfully') {
+      alert('PractitionerRole created successfully.');
+      // Add the new role to the practitionerRoles array using the returned data
+      practitionerRoles = [...practitionerRoles, data.data];
+      updateAvailableOrganizations();
     } else {
-      message = `Error: ${result.error || 'Unknown error occurred'}`;
+      // Show an error message if the creation failed
+      alert(`Error creating PractitionerRole: ${data.error || 'Unknown error occurred.'}`);
     }
   } catch (error) {
-    console.error('Error in handleSubmit:', error);
-    message = `Error: ${error.message || 'Unknown error occurred'}`;
+    console.error('Error adding association:', error);
+    alert(`Failed to create PractitionerRole: ${error.message}`);
   }
 }
 
-  // Function to cancel the form and reset the associations
-  function handleCancel() {
-    associations = [];
-    message = '';
-  }
 </script>
 
 <div class="container">
   <h2>Associate Practitioners with Organizations</h2>
 
-  <button on:click={addAssociation}>Add Association</button>
+  <!-- Practitioner selection -->
+  <label>Practitioner:</label>
+  <select bind:value={selectedPractitioner} on:change={handlePractitionerChange}>
+    <option value="">Select Practitioner</option>
+    {#each practitioners as practitioner}
+      <option value={practitioner}>{practitioner.displayName}</option>
+    {/each}
+  </select>
 
-  {#each associations as association, index}
-    <div class="association">
-      <!-- Practitioner dropdown -->
-      <select bind:value={association.practitionerId}>
-        <option value="">Select Practitioner</option>
-        {#each practitioners as practitioner}
-          <option value={practitioner.id}>{practitioner.displayName}</option>
-        {/each}
-      </select>
+  <!-- Display Practitioner-Organization pairs -->
+  {#if practitionerRoles.length > 0}
+    <h3>Associated Organizations</h3>
+    <ul>
+      {#each practitionerRoles as role}
+        <li>{role.practitionerName} - {role.organization.name}</li>
+      {/each}
+    </ul>
+  {/if}
 
-      <!-- Organization dropdown -->
-      <select bind:value={association.organizationId}>
+  <!-- Organization selection and add association -->
+  {#if selectedPractitioner && availableOrganizations.length > 0}
+    <div class="add-association">
+      <label>Associate with Organization:</label>
+      <select bind:value={selectedOrganizationId}>
         <option value="">Select Organization</option>
-        {#each organizations as organization}
-          <option value={organization.id}>{organization.name}</option>
+        {#each availableOrganizations as org}
+          <option value={org.id}>{org.name}</option>
         {/each}
       </select>
-
-      <button on:click={() => removeAssociation(index)}>Remove</button>
+      <button on:click={() => addAssociation(selectedOrganizationId)}>Add Association</button>
     </div>
-  {/each}
-
-  <div class="actions">
-    <button on:click={handleSubmit}>Submit</button>
-    <button on:click={handleCancel}>Cancel</button>
-  </div>
+  {/if}
 
   {#if message}
     <p class="message">{message}</p>
@@ -162,20 +202,31 @@ async function handleSubmit() {
     margin: 0 auto;
     padding: 20px;
   }
-  .association {
+
+  .add-association {
     display: flex;
     gap: 10px;
-    margin-bottom: 10px;
-  }
-  select {
-    flex-grow: 1;
-  }
-  .actions {
     margin-top: 20px;
   }
-  button {
-    margin-right: 10px;
+
+  select {
+    flex-grow: 1;
+    margin-bottom: 10px;
   }
+
+  button {
+    padding: 5px 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+
+  button:hover {
+    background-color: #45a049;
+  }
+
   .message {
     margin-top: 15px;
     padding: 10px;
