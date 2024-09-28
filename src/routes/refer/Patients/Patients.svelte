@@ -16,9 +16,9 @@
   <!-- Navigation Bar -->
   <nav class="patients-nav">
     <ul>
+      <li class:selected={selectedTab === 'info'} on:click={() => switchTab('info')}>Info</li>
       <li class:selected={selectedTab === 'referrals'} on:click={() => switchTab('referrals')}>Referrals</li>
       <li class:selected={selectedTab === 'consents'} on:click={() => switchTab('consents')}>Consents</li>
-      <li class:selected={selectedTab === 'info'} on:click={() => switchTab('info')}>Info</li>
     </ul>
   </nav>
 
@@ -67,6 +67,6 @@
   }
 
   main {
-    padding: 20px;
+
   }
 </style>

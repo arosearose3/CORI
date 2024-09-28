@@ -31,18 +31,22 @@
     {:else}
       <!-- Default view with Goals and Conditions lists -->
       <h4>Goals</h4>
+      <h5>"I want the patient to achieve (or sustain) some measured state, possibly in a particular timeframe."</h5>
+
+
       <button on:click={addGoal}>Add Goal</button>
-      <!-- <GoalsList {currentPatientId} {currentPractitionerId} />/> -->
+      <GoalsList {currentPatientId} {currentPractitionerId} />
   
       <h4>Conditions</h4>
+      <h5>"This is an issue/situation/challenge the patient has."</h5>
       <button on:click={addCondition}>Add Condition</button>
-      <!-- <ConditionsList {currentPatientId} {currentPractitionerId} />/> -->
+      <ConditionsList {currentPatientId} {currentPractitionerId} />
     {/if}
   </div>
   
   <style>
     .info-section {
-      padding: 20px;
+  
     }
   
     button {

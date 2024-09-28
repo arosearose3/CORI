@@ -1,7 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { currentPractitioner } from '$lib/practitionerStore.js';
-  import { writable } from 'svelte/store';
+  import { user, actions } from '$lib/stores'; // Import the combined store and actions
 
   let roles = [];
   let sortColumn = 'practitioner';
@@ -9,37 +8,76 @@
   let selectedRole = null;
   let loading = true;
 
+  // Reactive assignment for practitionerData
+  $: practitionerData = $user.practitioner;
+
   onMount(async () => {
     await fetchRoles();
   });
 
+  /**
+   * Fetches all practitioner roles from the backend.
+   */
   async function fetchRoles() {
     loading = true;
     try {
-      const response = await fetch('/avail/api/role/all');
+      const response = await fetch('/avail/api/role/all', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include' // Include credentials if necessary
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch roles: ${response.status} ${response.statusText}`);
+      }
+
       const data = await response.json();
 
       if (data.entry && Array.isArray(data.entry)) {
-        roles = await Promise.all(data.entry.map(async entry => {
-          const role = entry.resource;
-          
-          // Fetch Practitioner name
-          const practitionerResponse = await fetch(`/avail/api/practitioner/${role.practitioner.reference.split('/')[1]}`);
-          const practitionerData = await practitionerResponse.json();
-          const practitionerName = practitionerData.name?.text || 'Unknown';
+        roles = await Promise.all(
+          data.entry.map(async entry => {
+            const role = entry.resource;
 
-          // Fetch Organization name
-          const organizationResponse = await fetch(`/avail/api/organization/${role.organization.reference.split('/')[1]}`);
-          const organizationData = await organizationResponse.json();
-          const organizationName = organizationData.name || 'Unknown';
+            // Extract Practitioner ID
+            const practitionerId = role.practitioner.reference.split('/')[1];
+            // Fetch Practitioner details
+            const practitionerResponse = await fetch(`/avail/api/practitioner/${practitionerId}`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include' // Include credentials if necessary
+            });
 
-          return {
-            id: role.id,
-            practitioner: { name: practitionerName },
-            organization: { name: organizationName },
-            availability: role.availableTime || []
-          };
-        }));
+            if (!practitionerResponse.ok) {
+              throw new Error(`Failed to fetch practitioner: ${practitionerResponse.status} ${practitionerResponse.statusText}`);
+            }
+
+            const practitionerData = await practitionerResponse.json();
+            const practitionerName = practitionerData.name?.text || 'Unknown';
+
+            // Extract Organization ID
+            const organizationId = role.organization.reference.split('/')[1];
+            // Fetch Organization details
+            const organizationResponse = await fetch(`/avail/api/organization/${organizationId}`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include' // Include credentials if necessary
+            });
+
+            if (!organizationResponse.ok) {
+              throw new Error(`Failed to fetch organization: ${organizationResponse.status} ${organizationResponse.statusText}`);
+            }
+
+            const organizationData = await organizationResponse.json();
+            const organizationName = organizationData.name || 'Unknown';
+
+            return {
+              id: role.id,
+              practitioner: { name: practitionerName, id: practitionerId },
+              organization: { name: organizationName, id: organizationId },
+              availability: role.availableTime || [],
+            };
+          })
+        );
         sortRoles();
       } else {
         console.error('Unexpected response format:', data);
@@ -51,6 +89,9 @@
     }
   }
 
+  /**
+   * Sorts the roles based on the selected column and direction.
+   */
   function sortRoles() {
     roles = roles.sort((a, b) => {
       const factor = sortDirection === 'asc' ? 1 : -1;
@@ -63,6 +104,10 @@
     roles = [...roles]; // Trigger reactivity
   }
 
+  /**
+   * Handles the sorting logic when a column header is clicked.
+   * @param {string} column - The column to sort by ('practitioner' or 'organization')
+   */
   function handleSort(column) {
     if (sortColumn === column) {
       sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
@@ -73,19 +118,20 @@
     sortRoles();
   }
 
+  /**
+   * Handles role selection and updates the practitioner data in the store.
+   * @param {Object} role - The selected role object
+   */
   function handleRoleSelection(role) {
     selectedRole = role;
-    $currentPractitioner = {
+    actions.setPractitioner({
       id: role.id,
-      practitioner: {
-        id: role.id,
-        name: role.practitioner.name
-      },
+      name: role.practitioner.name,
       organizationId: role.organization.id,
       organizationName: role.organization.name,
-      availability: role.availability || null
-    };
-    console.log("currentPractitioner:", JSON.stringify($currentPractitioner));
+      availability: role.availability || null,
+    });
+    console.log('Current practitioner data:', practitionerData);
   }
 </script>
 
@@ -98,44 +144,46 @@
       <p>Loading roles...</p>
     </div>
   {:else}
-    <table>
-      <thead>
-        <tr>
-          <th>Select</th>
-          <th on:click={() => handleSort('practitioner')}>
-            Practitioner Name
-            {#if sortColumn === 'practitioner'}
-              <span class="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>
-            {/if}
-          </th>
-          <th on:click={() => handleSort('organization')}>
-            Organization Name
-            {#if sortColumn === 'organization'}
-              <span class="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>
-            {/if}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each roles as role (role.id)}
+    {#if roles.length > 0}
+      <table>
+        <thead>
           <tr>
-            <td>
-              <input
-                type="radio"
-                name="roleSelection"
-                value={role.id}
-                on:change={() => handleRoleSelection(role)}
-                checked={selectedRole === role}
-              />
-            </td>
-            <td>{role.practitioner.name}</td>
-            <td>{role.organization.name}</td>
+            <th>Select</th>
+            <th on:click={() => handleSort('practitioner')}>
+              Practitioner Name
+              {#if sortColumn === 'practitioner'}
+                <span class="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+              {/if}
+            </th>
+            <th on:click={() => handleSort('organization')}>
+              Organization Name
+              {#if sortColumn === 'organization'}
+                <span class="sort-indicator">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+              {/if}
+            </th>
           </tr>
-        {/each}
-      </tbody>
-    </table>
-
-
+        </thead>
+        <tbody>
+          {#each roles as role (role.id)}
+            <tr>
+              <td>
+                <input
+                  type="radio"
+                  name="roleSelection"
+                  value={role.id}
+                  on:change={() => handleRoleSelection(role)}
+                  checked={selectedRole === role}
+                />
+              </td>
+              <td>{role.practitioner.name}</td>
+              <td>{role.organization.name}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    {:else}
+      <p>No roles available.</p>
+    {/if}
   {/if}
 </div>
 
@@ -159,7 +207,8 @@
     margin-bottom: 20px;
   }
 
-  th, td {
+  th,
+  td {
     padding: 10px;
     text-align: left;
     border-bottom: 1px solid #ddd;
@@ -173,6 +222,7 @@
 
   th.sort-indicator {
     padding-left: 5px;
+    font-size: 0.8em;
   }
 
   tbody tr:hover {
@@ -196,16 +246,15 @@
   }
 
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 
-  .current-role {
-    margin-top: 20px;
-    font-weight: bold;
-  }
-
-  input[type="radio"] {
+  input[type='radio'] {
     margin-right: 10px;
   }
 

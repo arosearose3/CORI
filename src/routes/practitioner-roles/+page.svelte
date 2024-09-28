@@ -1,15 +1,19 @@
 <script>
-    import AssociatePractitionersOrganizations from './AssociatePractitionersOrganizations.svelte';
+  //  import AssociatePractitionersOrganizations from './AssociatePractitionersOrganizations.svelte';
     import AssociatePractitionerPatient from './AssociatePractitionerPatient.svelte';
     import AllRoles from './AllRoles.svelte';
-  //  import { currentPractitioner } from '$lib/practitionerStore.js';
+  //  import SetUserRoles from './SetUserRoles.svelte';
+
+  //  import { currentPractitioner } from '$lib/stores.js';
 
   </script>
   
   <h2>Practitioner Roles</h2>
 
+  
+
   <div class="practitioner-roles-container">
-    <AssociatePractitionersOrganizations />
+   
     <hr>
     <AssociatePractitionerPatient />
     <div class="top-row">

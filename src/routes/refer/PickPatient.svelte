@@ -120,7 +120,7 @@
   
 <style>
   .pick-patient {
-    padding: 20px;
+ 
   }
 
   h3 {

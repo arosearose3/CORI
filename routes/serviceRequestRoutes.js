@@ -1,16 +1,21 @@
 import express from 'express';
 import { auth, healthcare, PROJECT_ID, LOCATION, DATASET_ID, FHIR_STORE_ID, handleBlobResponse } from '../serverutils.js';
 
+import { getFhirAccessToken } from '../src/lib/auth/auth.js'; // Adjust the path as needed
 const router = express.Router();
 
 // Endpoint to add a new ServiceRequest
 router.post('/add', async (req, res) => {
+ 
   if (!auth) {
     return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
   }
 
   try {
     const serviceRequestData = req.body;
+
+    console.log ('in SR add d:'+JSON.stringify(serviceRequestData));
+
     serviceRequestData.resourceType = 'ServiceRequest'; // Ensure resourceType is set
 
     const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;

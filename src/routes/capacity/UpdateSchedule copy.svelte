@@ -115,38 +115,30 @@
   async function handleSubmit() {
     if (!selectedRole) return;
     try {
-      const updatedRole = {
-        resourceType: "PractitionerRole",
-        id: selectedRole.id,
-        practitioner: { reference: `Practitioner/${selectedRole.practitionerId}` },
-        organization: { reference: `Organization/${selectedRole.organizationId}` },
-        availableTime: selectedRole.availableTime,
+      const practitionerRole = practitionerRoles[0];
+
+      let capacity = null;
+    if (selectedRole.capacity && selectedRole.capacity.length > 0) {
+      capacity = {
+        url: "https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html",
+        extension: selectedRole.capacity,
       };
+    }
 
-      if (selectedRole.capacity && selectedRole.capacity.length > 0) {
-        updatedRole.extension = [
-          {
-            url: "https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html",
-            extension: selectedRole.capacity
-          }
-        ];
-      }
-
-      const response = await fetch('/avail/api/role/update', {
-        method: 'PUT',
+      const response = await fetch('/avail/api/role/patchCapacity', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedRole),
+        body: JSON.stringify({practitionerRole, capacity}),
       });
 
-      if (!response.ok) throw new Error('Failed to update the practitioner role.');
+      if (!response.ok) throw new Error('Failed to update the capacity.');
 
-      const result = await response.json();
-      updateMessage = "Capacity and Availability updated.";
-    } catch (error) {
-      console.error(error);
-      updateMessage = "Failed to update Capacity and/or Availability.";
-    }
+      const data = await response.json();
+    console.log('Successfully updated capacity:', data);
+  } catch (error) {
+    console.error('Error updating capacity:', error.message);
   }
+}
 
   // Handle capacity change from Pick4 component
   function handleCapacityChange(event) {
@@ -167,6 +159,8 @@
   }
 </script>
 
+<hr>
+UpdateSchedule component, providerID = {currentPractitionerId}
 <div>
   {#if practitionerRoles.length > 0}
     <h2>{practitionerName}'s Capacity and Availability</h2>

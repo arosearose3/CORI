@@ -1,4 +1,11 @@
 <script>
+  //
+  // to-do. the update requires a complete Resource, 
+  // including id, which won't be there if there's no PractRole object yet
+  // consider update/create
+  //  - so update needs to also preserve the Roles extension
+  
+
   import { onMount } from 'svelte';
 
   let practitioners = [];
@@ -36,23 +43,20 @@
     }
   }
 
-  // Function to fetch organizations and transform the FHIR response
+  // Function to fetch organizations and handle the current array response
   async function fetchOrganizations() {
     try {
       const response = await fetch('/avail/api/organization/all');
       const data = await response.json();
 
-      // Check if the response is a FHIR bundle and has entries
-      if (data.resourceType === 'Bundle' && Array.isArray(data.entry)) {
-        organizations = data.entry.map(entry => {
-          const organization = entry.resource;
-          return {
-            id: organization.id || '',
-            name: organization.name || 'Unnamed Organization',
-          };
-        });
+      // Check if the response is an array of organizations
+      if (Array.isArray(data)) {
+        organizations = data.map(organization => ({
+          id: organization.id || '',
+          name: organization.name || 'Unnamed Organization',
+        }));
       } else {
-        throw new Error('Invalid Organization FHIR Bundle format');
+        throw new Error('Invalid Organization format');
       }
     } catch (error) {
       console.error('Error fetching organizations:', error);
@@ -71,40 +75,42 @@
   }
 
   // Function to handle the form submission and update practitioner roles
-  async function handleSubmit() {
-    try {
-      const practitionerRoles = associations.map(assoc => ({
-        resourceType: 'PractitionerRole',
-        practitioner: {
-          reference: `Practitioner/${assoc.practitionerId}`,
-        },
-        organization: {
-          reference: `Organization/${assoc.organizationId}`,
-        },
-        active: true,
-      }));
+  // Client-side code: Corrected handleSubmit function
+async function handleSubmit() {
+  try {
+    const practitionerRoles = associations.map(assoc => ({
+      resourceType: 'PractitionerRole',
+      practitioner: {
+        reference: `Practitioner/${assoc.practitionerId}`,
+      },
+      organization: {
+        reference: `Organization/${assoc.organizationId}`,
+      },
+      active: true,
+    }));
 
-      const response = await fetch('/avail/api/role/update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ practitionerRoles }),
-      });
+    // Ensure the method is PUT, and stringify the JSON body
+    const response = await fetch('/avail/api/role/update', {
+      method: 'PUT', // Ensure this matches the server-side endpoint
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(practitionerRoles), // Properly stringify the body
+    });
 
-      const result = await response.json();
+    const result = await response.json();
 
-      if (response.ok) {
-        message = 'Associations updated successfully';
-        associations = [];
-      } else {
-        message = `Error: ${result.error || 'Unknown error occurred'}`;
-      }
-    } catch (error) {
-      console.error('Error in handleSubmit:', error);
-      message = `Error: ${error.message || 'Unknown error occurred'}`;
+    if (response.ok) {
+      message = 'Associations updated successfully';
+      associations = [];
+    } else {
+      message = `Error: ${result.error || 'Unknown error occurred'}`;
     }
+  } catch (error) {
+    console.error('Error in handleSubmit:', error);
+    message = `Error: ${error.message || 'Unknown error occurred'}`;
   }
+}
 
   // Function to cancel the form and reset the associations
   function handleCancel() {

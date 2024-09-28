@@ -33,7 +33,7 @@
   
   <style>
     .consents-section {
-      padding: 20px;
+    
     }
   
     ul {

@@ -2,6 +2,8 @@ import express from 'express';
 import { auth, healthcare, PROJECT_ID, LOCATION, DATASET_ID, FHIR_STORE_ID, handleBlobResponse } from '../serverutils.js';
 const router = express.Router();
 
+import axios from 'axios'; // Make sure Axios is imported
+
 //update generalPractitioner
 router.post('/update', async (req, res) => {
     if (!auth) {
@@ -59,43 +61,39 @@ router.post('/update', async (req, res) => {
     }
   });
   
-// Endpoint to get all patients linked to a specific practitioner
+
+    
+// Get Practitioner's Patients
 router.get('/getPractitionersPatients', async (req, res) => {
   if (!auth) {
     return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
   }
-
   const { practitionerId } = req.query;
-
   if (!practitionerId) {
     return res.status(400).json({ error: 'Practitioner ID is required.' });
   }
-
   try {
-    const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;
-    const searchUrl = `${parent}/fhir/Patient`;
+    // Construct the URL to fetch patients associated with the Practitioner
+    const url = `https://healthcare.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}/fhir/Patient?general-practitioner=${practitionerId}`;
 
-    // Make the search request to the FHIR store
-    const response = await healthcare.projects.locations.datasets.fhirStores.fhir.search({
-      parent,
-      resourceType: 'Patient',
-      auth: auth,
-      params: {
-        'general-practitioner': `Practitioner/${practitionerId}`
+    console.log("Requesting URL: ", url);
+    const accessToken = await getFhirAccessToken();
+    // Make the HTTP GET request using Axios
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`, // Include the access token in the header
+        'Accept': 'application/fhir+json' // Specify FHIR JSON format
       }
     });
 
-    // Handle the response from the FHIR store
+    // Process the response data
     const patients = await handleBlobResponse(response.data);
     res.json(patients);
-
   } catch (error) {
-    console.error('Error fetching patients:', error);
+    console.error('Error fetching patients:', error.response ? error.response.data : error.message);
     res.status(500).json({ error: 'Failed to fetch patients', details: error.message });
   }
 });
-
-
 
 // Add a new Patient
 router.post('/add', async (req, res) => {

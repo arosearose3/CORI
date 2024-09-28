@@ -25,6 +25,17 @@ const wss = new WebSocketServer({ server, path: '/avail' });
 
 app.use(express.json());
 
+// Middleware to check authentication
+function checkAuth(req, res, next) {
+  if (!req.session || !req.session.user) {
+    return res.redirect('/login'); // Redirect to login page if not authenticated
+  }
+  next();
+}
+
+// Apply the middleware to the /avail route
+app.use('/avail', checkAuth); 
+
 let isConnectedToGoogleCloud = false;
 
 // API to connect to Google Cloud
@@ -34,15 +45,12 @@ app.post('/avail/api/connect', async (req, res) => {
   }
 
   try {
-    // Ensure connectToGoogleCloud returns a consistent response
     const connectionResult = await connectToGoogleCloud();
 
-    // Check if connectToGoogleCloud returned an object with 'success'
     if (connectionResult && connectionResult.success) {
       isConnectedToGoogleCloud = true;
       return res.status(200).json({ message: 'Connected to Google Cloud successfully' });
     } else {
-      // Handle cases where connectionResult does not have 'success'
       const errorMessage = connectionResult?.error || 'Unknown error occurred';
       return res.status(500).json({ error: errorMessage });
     }
@@ -52,7 +60,7 @@ app.post('/avail/api/connect', async (req, res) => {
   }
 });
 
-// Set up API routes (by resource type)
+// Set up API routes
 app.use('/avail/api/practitioner', practitionerRoutes);
 app.use('/avail/api/organization', organizationRoutes);
 app.use('/avail/api/role', roleRoutes);
@@ -63,7 +71,6 @@ app.use('/avail/api/goal', goalRoutes);
 app.use('/avail/api/provenance', provenanceRoutes);
 app.use('/avail/api/task', taskRoutes);
 app.use('/avail/api/serviceRequest', serviceRequestRoutes);
-
 
 // Default handler for other routes
 app.use(handler);

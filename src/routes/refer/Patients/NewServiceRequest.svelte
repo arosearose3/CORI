@@ -57,7 +57,7 @@
         performer: {
           reference: `Organization/${performer}`
         },
-        basedOn: [
+ /*       basedOn: [
           {
             reference: `Goal/${selectedGoal}`
           }
@@ -66,7 +66,7 @@
           {
             reference: `Condition/${selectedCondition}`
           }
-        ]
+        ] */
       };
       console.log('Service Request Created:', serviceRequest);
       // Add logic for submitting the service request
