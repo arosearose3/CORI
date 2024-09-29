@@ -62,11 +62,15 @@ export const abilities = writable(new PureAbility([]));
  * @param {Array<string>} userRoles - The roles assigned to the user.
  */
 export function updateAbilities(userRoles) {
+  if (!userRoles) {
+  //  console.log ("updateAbilites in stores.js - null UserRoles"); 
+    return;}
+
   try {
     const { can, cannot, build } = new AbilityBuilder(PureAbility);
 
-    console.log("=== Updating Abilities ===");
-    console.log("User Roles:", userRoles);
+  //  console.log("=== Updating Abilities ===");
+   // console.log("User Roles:", userRoles);
 
     if (userRoles.includes('admin')) {
       can('manage', 'all'); // Admin can do everything
@@ -123,7 +127,7 @@ export function updateAbilities(userRoles) {
 
       can('view', 'ServiceRequests');
       can('view', 'Consents');
-      can('view', 'Settings');
+      can('view', 'User Settings');
       can('view', 'OrganizationSearch');
       can('view', 'Notifications');
       can('view', 'Messages');
@@ -132,8 +136,8 @@ export function updateAbilities(userRoles) {
 
     const builtAbility = build();
     abilities.set(builtAbility);
-    console.log("=== Abilities Updated ===");
-    console.log("Ability Rules:", builtAbility.rules);
+    //console.log("=== Abilities Updated ===");
+    //console.log("Ability Rules:", builtAbility.rules);
   } catch (error) {
     console.error('Error updating abilities:', error);
   }
@@ -155,9 +159,9 @@ export function setUser(userData) {
       email: userData.email || null,
       name: userData.name || null,
       picture: userData.picture || null,
-      roles: Array.isArray(userData.roles) ? userData.roles : [],
+ 
     };
-    console.log("User Store Updated:", store.user);
+   // console.log("User Store Updated:", store.user);
     updateAbilities(store.user.roles); // Update abilities based on roles
     return store;
   });
@@ -181,9 +185,10 @@ export function setPractitioner(practitionerData) {
       organizationName: practitionerData.organizationName || null,
       availability: practitionerData.availability || null,
       PractitionerRoleId: practitionerData.PractitionerRoleId || null,
+      roles: Array.isArray(practitionerData.roles) ? practitionerData.roles : [],
     };
-    console.log("Practitioner Store Updated:", store.practitioner);
-    console.log("Full Practitioner Object:", store.practitioner); // Log the full practitioner object
+   // console.log("Practitioner Store Updated:", store.practitioner);
+   // console.log("Full Practitioner Object:", store.practitioner); // Log the full practitioner object
     return store;
   });
 }

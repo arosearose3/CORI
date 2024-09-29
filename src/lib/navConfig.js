@@ -1,11 +1,11 @@
 // src/lib/navConfig.js
-
+// { label: 'All Organizations', path: '/avail/admin/organizations', subject: 'AllOrganizations' },
 export const navItems = [
   {
     label: 'Settings',
     icon: '⚙️',
-    path: '/settings',
-    subject: 'Settings',
+    path: '/avail/usersettings',
+    subject: 'User Settings',
     subItems: [
       { label: 'SMS', path: '/settings/sms', subject: 'SMSSettings' },
       { label: 'Email', path: '/settings/email', subject: 'EmailSettings' },

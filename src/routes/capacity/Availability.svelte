@@ -308,7 +308,7 @@ console.log ("in Avail, onMount, initialAvail:"+JSON.stringify(initialAvailabili
   }
 </script>
 
-<div class="instructions">v0.91 Use checkboxes to show all day availability.</div>
+<div class="instructions">Click checkboxes to show all day availability.</div>
 
 <div class="grid" bind:this={gridElement}>
   <div class="header-row">
@@ -392,7 +392,7 @@ console.log ("in Avail, onMount, initialAvail:"+JSON.stringify(initialAvailabili
   </div>
 {/if}
 
-<!-- Debug Information -->
+<!-- Debug Information 
 <div class="debug-info">
   <h3>Debug Information:</h3>
   <p><strong>Mouse Position:</strong> {mouseDay} at {mouseTime}</p>
@@ -400,6 +400,10 @@ console.log ("in Avail, onMount, initialAvail:"+JSON.stringify(initialAvailabili
   <h3>FHIR Availability:</h3>
   <pre>{JSON.stringify($fhirAvailability, null, 2)}</pre>
 </div>
+
+-->
+
+
 <style>
   .instructions {
     margin-bottom: 10px;

@@ -160,22 +160,19 @@
   }
 </script>
 
-<hr>
 <div>
-  current PR: {currentPractitionerRoleId}<br>
-  <h2>{practitionerName}'s Capacity and Availability</h2>
+  <h3>Capacity and Availability</h3>
  
-    <h2>Editing Schedule for {practitionerName}</h2>
     <button on:click={handleSubmit}>Submit</button>
     {#if updateMessage}
       <p>{updateMessage}</p>
 
     {/if}
     <Pick4 on:capacitychange={handleCapacityChange} capacity={capacityData} />
-    <hr />
+    <br><hr /><br>
     <Availability initialAvailability={availabilityData} on:availabilityUpdate={handleAvailabilityUpdate} />
 
-    <h3>{errorMessage}</h3>
+    <!-- <h3>{errorMessage}</h3> -->
   
 </div>
 

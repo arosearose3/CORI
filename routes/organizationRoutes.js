@@ -104,6 +104,47 @@ router.get('/all', async (req, res) => {
 
 
 
+
+
+// Get the name of an Organization by its reference
+router.get('/getOrgName', async (req, res) => {
+  if (!auth) {
+    return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
+  }
+
+  const { reference } = req.query;
+  //console.log ("org/getName reference:"+reference);
+  // Extract organizationId from the reference, e.g., "Organization/71888285-135a-4eb2-a579-93e3f2e65ea8"
+  const organizationId = reference?.split('/')[1];
+  if (!organizationId) {
+    return res.status(400).json({ error: 'Invalid organization reference. Unable to extract Organization ID.' });
+  }
+  try {
+    const accessToken = await getFhirAccessToken();
+    const searchUrl = `${FHIR_BASE_URL}/Organization/${organizationId}`;
+    //console.log ("org/getName searchUrl:"+searchUrl);
+
+    // Fetch the Organization details
+    const organizationResponse = await axios.get(searchUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/fhir+json',
+      },
+    });
+
+    //console.log ("org/getname res:"+JSON.stringify(organizationResponse.data));
+    // Extract the organization name from the response
+    const organization = organizationResponse.data;
+    const orgName = organization.name || 'Unknown Organization';
+
+    res.json(orgName );
+  } catch (error) {
+    console.error('Error fetching Organization name:', error.message);
+    res.status(500).json({ error: 'Failed to fetch Organization name', details: error.message });
+  }
+});
+
+
 //get one Organization  
 router.get('/:organizationId', async (req, res) => {
   if (!auth) {
@@ -145,6 +186,5 @@ router.get('/:organizationId', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch Organization', details: error.message });
   }
 });
-
 
 export default router;

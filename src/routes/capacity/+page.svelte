@@ -35,16 +35,10 @@
   });
 </script>
 
-<hr>
 <!-- Display a loading message or handle it appropriately -->
 {#if isLoading}
   <p>Loading practitioner data...</p>
-  <p>Current practitionerId: {practitionerId} (should be null if still loading)</p>
 {:else}
-  <!-- Display the practitioner ID for debugging -->
-  <p>Practitioner ID: {practitionerId}</p>
-  <p>currentPractitionerRoleId: {currentPractitionerRoleId}</p>
-  <!-- Render the UpdateSchedule component once practitionerId is loaded -->
   <UpdateSchedule currentPractitionerRoleId={currentPractitionerRoleId} /> 
 {/if}
-<hr>
+
