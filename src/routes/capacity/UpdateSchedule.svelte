@@ -174,7 +174,8 @@
       <p>{updateMessage}</p>
     {/if}
 
-  {#if isDataReady} <!-- Only render Availability when data is ready -->
+  <!-- Render Availability regardless of whether data is ready or currentPractitionerRoleId is null -->
+  {#if isDataReady || currentPractitionerRoleId === null}
     <Pick4 on:capacitychange={handleCapacityChange} capacity={capacityData} />
     <br><hr /><br>
     <Availability initialAvailability={availabilityData} on:availabilityUpdate={handleAvailabilityUpdate} />

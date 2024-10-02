@@ -32,7 +32,7 @@
     clearTimeout(provenanceTimeout); // Cancel any pending hiding animations
     const record = provenanceRecords.find(r => r.status === stateCode);
     if (record) {
-      const boundingRect = event.target.getBoundingClientRect();
+      const boundingRect = event.currentTarget.getBoundingClientRect();
       hoveredProvenance = {
         ...record,
         x: boundingRect.left + window.scrollX,
@@ -114,8 +114,8 @@
     <div 
       class="state" 
       style="top: {state.y}px; left: {state.x}px; background-color: {state.color}; z-index: {state.zIndex}; width: {state.width}px; height: {state.height}px;"
-      on:mouseover={(event) => showProvenanceDetails(state.code, event)}
-      on:mouseout={hideProvenanceDetails}
+      on:mouseenter={(event) => showProvenanceDetails(state.code, event)}
+      on:mouseleave={hideProvenanceDetails}
     >
       <strong>{state.display}</strong>
       <p>Actor: {state.actor}</p>

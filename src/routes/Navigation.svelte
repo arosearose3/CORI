@@ -28,6 +28,17 @@
 </script>
 
 <nav class="navigation">
+
+  <div class="nav-section">
+    <a class="nav-link" href="/avail/demoflow" aria-label="Task Flow Demo">
+      "Task Flow Demo"
+    </a>
+    <a class="nav-link" href="/avail/capacity" aria-label="Availability/Capacity Demo">
+      "Availability/Capacity Demo"
+    </a>
+  </div>
+
+
   <!-- Ensure conditions are met to trigger the each block -->
   {#if userRoles.length > 0 && abilityRules.length > 0}    
     {#each navItems as item}
@@ -43,7 +54,8 @@
       {/if}
     {/each}
   {:else}
-    <p>Loading navigation...</p>
+  <!-- <p>Loading navigation...</p>-->
+    
   {/if}
 </nav>
 
@@ -63,7 +75,8 @@
     color: #333;
     border-radius: 4px;
     transition: background-color 0.3s;
-    font-size: 0.8rem;
+    font-size: 14px;
+   
   }
   .nav-link:hover {
     background-color: #e0e0e0;

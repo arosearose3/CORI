@@ -76,14 +76,16 @@ export function updateAbilities(userRoles) {
       can('manage', 'all'); // Admin can do everything
       console.log("Role 'admin': can manage all");
     }
-    if (userRoles.includes('org_admin')) {
+    if (userRoles.includes('orgadmin')) {
       can('manage', 'Settings');
       can('manage', 'Consents');
       can('manage', 'Notifications');
       can('manage', 'Messages');
       can('manage', 'Referrals');
-      can('manage', 'Admin');
       can('manage', 'Organization Clients')
+      can('manage', 'Organization Staff')
+      can('manage', 'Organization Admin')
+
       console.log("Role 'org_admin': can manage multiple subjects");
     }
     if (userRoles.includes('supervisor')) {
@@ -94,14 +96,15 @@ export function updateAbilities(userRoles) {
     if (userRoles.includes('provider')) {
       can('view', 'Capacity');
       can('view', 'Settings');
-      can('view', 'Consents');
-      can('view', 'Notifications');
-      can('view', 'Messages');
-      can('view', 'Referrals');
-      can('create', 'Referrals');
-      can('manage', 'DemoData');
+  //    can('view', 'Consents');
+  //    can('view', 'Notifications');
+  //    can('view', 'Messages');
+  //    can('view', 'Referrals');
+  //    can('view', 'OrganizationSearch');
+  //    can('create', 'Referrals');
+  //    can('manage', 'DemoData');
       can('manage', 'AvailabilityCapacity');
-      can('manage', 'Provider Clients');
+  //    can('manage', 'Provider Clients');
       console.log("Role 'provider': can view Referrals and manage DemoData & AvailabilityCapacity");
     }
     if (userRoles.includes('coordinator')) {

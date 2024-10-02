@@ -7,8 +7,9 @@ const config = {
   kit: {
     adapter: adapter(),
     paths: {
-      base: '/avail'
+      base: '/avail/prod'
     },
+   // trailingSlash: 'always', // Force a trailing slash
     prerender: {
       handleHttpError: 'warn'
     }

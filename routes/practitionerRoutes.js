@@ -149,23 +149,15 @@ router.get('/:practitionerId', async (req, res) => {
   if (!auth) {
     return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
   }
-
   const { practitionerId } = req.params;
-
   if (!practitionerId) {
     return res.status(400).json({ error: 'Practitioner ID is required.' });
   }
-
   try {
-
-    const searchUrl = `${FHIR_BASE_URL}/Practitioner?practitioner=${practitionerId}`;
+    const searchUrl = `${FHIR_BASE_URL}/Practitioner?_id=${practitionerId}`;
     const accessToken = await getFhirAccessToken();
 
-    // Fetch Practitioner details
- /*   const practitionerResponse = await healthcare.projects.locations.datasets.fhirStores.fhir.read({
-      name: practitionerUrl,
-      auth: auth,
-    }); */
+    console.log ("pract/getOne searchURL:"+searchUrl);
 
     const practitionerResponse = await axios.get(searchUrl, {
       headers: {

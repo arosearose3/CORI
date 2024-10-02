@@ -24,6 +24,27 @@ export const navItems = [
 
   },
   {
+    label: 'Organization Staff',
+    icon: '⚙️',
+    path: '/avail/staff/admin',
+    subject: 'Organization Staff',
+
+  },
+  {
+    label: 'Organization Admin',
+    icon: '⚙️',
+    path: '/avail/staff/orgadmin',
+    subject: 'Organization Admin',
+
+  },
+  {
+    label: 'Cori Staff',
+    icon: '⚙️',
+    path: '/avail/staff/admin',
+    subject: 'Cori Staff',
+
+  },
+  {
     label: 'Settings',
     icon: '⚙️',
     path: '/avail/usersettings',

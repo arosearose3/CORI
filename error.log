@@ -1,0 +1,27 @@
+SvelteKitError: Not found: /avail/avail
+    at resolve2 (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4232:18)
+    at resolve (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4065:34)
+    at #options.hooks.handle (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4297:71)
+    at respond (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4063:43)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  status: 404,
+  text: 'Not Found'
+}
+SvelteKitError: Not found: /avail/avail
+    at resolve2 (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4232:18)
+    at resolve (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4065:34)
+    at #options.hooks.handle (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4297:71)
+    at respond (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4063:43)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  status: 404,
+  text: 'Not Found'
+}
+SvelteKitError: Not found: /avail/organizations
+    at resolve2 (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4232:18)
+    at resolve (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4065:34)
+    at #options.hooks.handle (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4297:71)
+    at respond (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4063:43)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+  status: 404,
+  text: 'Not Found'
+}

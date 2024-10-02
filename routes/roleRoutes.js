@@ -8,6 +8,44 @@ const router = express.Router();
 const FHIR_BASE_URL = `https://healthcare.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}/fhir`;
 
 
+//find all PractionerRole resources for a single Org
+
+router.get('/withOrganization', async (req, res) => {
+  try {
+    const { organizationId } = req.query;
+
+    // Validate that the Organization ID is provided
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization ID is required.' });
+    }
+
+    // Get the OAuth2 access token
+    const accessToken = await getFhirAccessToken();
+
+    // Construct the search URL for PractitionerRoles with the specific organization
+    const searchUrl = `${FHIR_BASE_URL}/PractitionerRole?organization=Organization/${organizationId}`;
+
+    console.log ("role/withOrg searchUrl:"+searchUrl);
+
+    // Make the GET request to fetch the PractitionerRoles
+    const response = await axios.get(searchUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/fhir+json', // Ensure the response is FHIR-compliant JSON
+      },
+    });
+
+    // Handle the response and return the FHIR Bundle
+    const practitionerRoles = response.data;
+    res.status(200).json(practitionerRoles);
+
+  } catch (error) {
+    console.error('Error fetching PractitionerRoles with Organization:', error.message);
+    res.status(500).json({ error: 'Failed to fetch PractitionerRoles', details: error.message });
+  }
+});
+
+
 //-------------------------------------------------
 // Update PractitionerRole
 router.put('/update', async (req, res) => {

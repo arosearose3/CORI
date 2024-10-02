@@ -36,9 +36,8 @@
 </script>
 
 <!-- Display a loading message or handle it appropriately -->
-{#if isLoading}
+{#if isLoading && currentPractitionerRoleId !== null}
   <p>Loading practitioner data...</p>
 {:else}
   <UpdateSchedule currentPractitionerRoleId={currentPractitionerRoleId} /> 
 {/if}
-
