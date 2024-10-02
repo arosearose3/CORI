@@ -5,33 +5,44 @@
 
 <style>
   .user-profile {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     margin-top: 20px;
-    text-align: center;
+  }
+
+  .user-info {
+    text-align: left;
   }
 
   .user-profile img {
     border-radius: 50%;
-    width: 80px;
-    height: 80px;
+    width: 50px;
+    height: 50px;
     object-fit: cover;
-    margin-bottom: 10px;
   }
 
-  .user-profile .name {
+  .name {
     font-weight: bold;
     font-size: 16px;
   }
 
-  .user-profile .email {
+  .email {
     font-size: 14px;
     color: #555;
+    margin-top: 5px; /* Small spacing between name and email */
   }
 </style>
 
 {#if userData}
   <div class="user-profile">
+    <!-- Left-aligned name and email -->
+    <div class="user-info">
+      <div class="name">{userData.name}</div>
+      <div class="email">{userData.email}</div>
+    </div>
+
+    <!-- Right-aligned profile picture -->
     <img src="{userData.picture}" alt="{userData.name}'s profile picture" />
-    <div class="name">{userData.name}</div>
-    <div class="email">{userData.email}</div>
   </div>
 {/if}

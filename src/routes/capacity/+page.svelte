@@ -16,7 +16,7 @@
       practitionerId = value.practitioner.id;
       currentPractitionerRoleId = value.practitioner.PractitionerRoleId;
       isLoading = false;
-      console.log('Practitioner data loaded:', value.practitioner);
+      console.log('capacity/+page Practitioner data loaded:', value.practitioner);
     } else {
       console.warn('User or practitioner data is not available.');
     }

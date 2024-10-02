@@ -83,6 +83,7 @@ export function updateAbilities(userRoles) {
       can('manage', 'Messages');
       can('manage', 'Referrals');
       can('manage', 'Admin');
+      can('manage', 'Organization Clients')
       console.log("Role 'org_admin': can manage multiple subjects");
     }
     if (userRoles.includes('supervisor')) {
@@ -100,6 +101,7 @@ export function updateAbilities(userRoles) {
       can('create', 'Referrals');
       can('manage', 'DemoData');
       can('manage', 'AvailabilityCapacity');
+      can('manage', 'Provider Clients');
       console.log("Role 'provider': can view Referrals and manage DemoData & AvailabilityCapacity");
     }
     if (userRoles.includes('coordinator')) {

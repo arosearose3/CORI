@@ -12,6 +12,8 @@
   import { Ability } from '@casl/ability';
   import { goto } from '$app/navigation';
   import Navigation from './Navigation.svelte';
+  import UserProfile from "./UserProfile2.svelte";
+
 
   let userData = null;
   let ability = null;
@@ -352,22 +354,27 @@ console.log ("+layout/fetchPractDataEmail name:"+practitionerName);
     
   <!-- Authentication Buttons -->
   {#if !isUserAuthenticated}
+    <br>
     <button class="nav-button" on:click={handleLogin} aria-label="Log In with Google">Log In with Google</button>
   {:else}
     <button class="nav-button logout" on:click={handleLogout} aria-label="Log Out">Log Out</button>
   {/if}
 
+  <!--
   {#if !isFhirAuthenticated}
     <button class="nav-button" on:click={handleConnectFhir} aria-label="Connect to FHIR">Connect to FHIR</button>
   {:else}
     <button class="nav-button logout" on:click={handleDisconnectFhir} aria-label="Disconnect FHIR">Disconnect FHIR</button>
   {/if}
-
+  -->
+<!--
   {#if fhirError}
     <div class="error-message" role="alert" aria-live="assertive">
       FHIR Auth Error: {fhirError}
     </div>
   {/if}
+  -->
+
   </aside>
 
   <main class="main-content">
@@ -404,19 +411,24 @@ console.log ("+layout/fetchPractDataEmail name:"+practitionerName);
 
     <!-- Display selected roles if a PractitionerRole is chosen -->
     {#if selectedPractitionerRole }
-      <div class="role-info">
-
-        <h3>{practitionerName}'s roles at {currentOrgName}:</h3>
-        <ul>
-          {#each userRoles as role}
-            <li>{role}</li>
-          {/each}
-        </ul>
-        Switch Organizations
+    <div class="user-info">
+      <UserProfile {userData}/>
       </div>
+    
+    <div class="role-info">
+      <p>
+        Roles at {currentOrgName}: 
+        {#each userRoles as role, index}
+          <span>{role}{#if index < userRoles.length - 1},{'\u00A0'}{/if}</span>
+        {/each}
+      <span>  | Switch Organizations</span></p>
+    </div>
+    <hr>
     {/if}
    
+    {#if isUserAuthenticated}
     <slot></slot>
+    {/if}
   
   </main>
 </div>

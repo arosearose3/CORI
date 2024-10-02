@@ -1,6 +1,28 @@
 // src/lib/navConfig.js
 // { label: 'All Organizations', path: '/avail/admin/organizations', subject: 'AllOrganizations' },
 export const navItems = [
+
+  {
+    label: 'Clients',
+    icon: '⚙️',
+    path: '/avail/clients/provider',
+    subject: 'Provider Clients',
+
+  },
+  {
+    label: 'Organization Clients',
+    icon: '⚙️',
+    path: '/avail/clients/orgadmin',
+    subject: 'Organization Clients',
+
+  },
+  {
+    label: 'Cori Clients',
+    icon: '⚙️',
+    path: '/avail/clients/admin',
+    subject: 'Cori Clients',
+
+  },
   {
     label: 'Settings',
     icon: '⚙️',
@@ -18,7 +40,7 @@ export const navItems = [
   {
     label: 'Consents',
     icon: '✅',
-    path: '/consents',
+    path: '/avail/consents',
     subject: 'Consents',
     subItems: [
       { label: 'SMS Consents', path: '/consents/sms', subject: 'SMSConsents' },
@@ -29,13 +51,13 @@ export const navItems = [
   {
     label: 'Organization Search',
     icon: '🔍',
-    path: '/organizations',
+    path: '/avail/organizationsearch',
     subject: 'OrganizationSearch',
   },
   {
     label: 'Notifications',
     icon: '🔔',
-    path: '/notifications',
+    path: '/avail/notifications',
     subject: 'Notifications',
     subItems: [
       { label: 'Read Notifications', path: '/notifications/read', subject: 'ReadNotifications' },
@@ -45,7 +67,7 @@ export const navItems = [
   {
     label: 'Messages',
     icon: '✉️',
-    path: '/messages',
+    path: '/avail/messages',
     subject: 'Messages',
     subItems: [
       { label: 'Create Message', path: '/messages/create', subject: 'CreateMessage' },
@@ -65,27 +87,27 @@ export const navItems = [
   {
     label: 'Referrals',
     icon: '📄',
-    path: '/referrals',
+    path: '/avail/referrals',
     subject: 'Referrals',
     subItems: [
-      { label: 'Create Referral', path: '/referrals/create', subject: 'CreateReferral' },
-      { label: 'Delete Referral', path: '/referrals/delete', subject: 'DeleteReferral' },
-      { label: 'Referral History', path: '/referrals/history', subject: 'ReferralHistory' },
-      { label: 'Revoke Consents', path: '/referrals/revoke-consents', subject: 'RevokeConsents' },
-      { label: 'Leave Referral', path: '/referrals/leave', subject: 'LeaveReferral' },
-      { label: 'Own Records', path: '/referrals/own-records', subject: 'OwnRecords' },
-      { label: 'Insurance Info', path: '/referrals/insurance-info', subject: 'InsuranceInfo' },
+      { label: 'Create Referral', path: '/avail/referrals/create', subject: 'CreateReferral' },
+      { label: 'Delete Referral', path: '/avail/referrals/delete', subject: 'DeleteReferral' },
+      { label: 'Referral History', path: '/avail/referrals/history', subject: 'ReferralHistory' },
+      { label: 'Revoke Consents', path: '/avail/referrals/revoke-consents', subject: 'RevokeConsents' },
+      { label: 'Leave Referral', path: '/avail/referrals/leave', subject: 'LeaveReferral' },
+      { label: 'Own Records', path: '/avail/referrals/own-records', subject: 'OwnRecords' },
+      { label: 'Insurance Info', path: '/avail/referrals/insurance-info', subject: 'InsuranceInfo' },
     ]
   },
   {
     label: 'Admin',
     icon: '🛠️',
-    path: '/admin',
+    path: '/avail/admin/organizations',
     subject: 'Admin',
     subItems: [
       { label: 'All Organizations', path: '/avail/admin/organizations', subject: 'AllOrganizations' },
-      { label: 'All Staff', path: '/admin/staff', subject: 'AllStaff' },
-      { label: 'All Referrals', path: '/admin/referrals', subject: 'AllReferrals' },
+      { label: 'All Staff', path: '/avail/admin/staff', subject: 'AllStaff' },
+      { label: 'All Referrals', path: '/avail/admin/referrals', subject: 'AllReferrals' },
     ]
   },
 ];

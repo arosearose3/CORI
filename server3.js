@@ -54,7 +54,7 @@ const oauth2Client = new OAuth2Client(
 function checkAuth(req, res, next) {
     // Log request path and original URL for debugging
   
-    console.log('requested URL:', req.originalUrl);
+    console.log('in serv3/CheckAuth URL:', req.originalUrl);
 
     // Define open paths that should bypass the auth check
     const openPaths = [
@@ -73,10 +73,6 @@ function checkAuth(req, res, next) {
         '/avail/auth/proxy-image',
         '/avail/demoflow',
         '/avail/api'
-
-
-
-
     ];
 
     // Check if the request path starts with one of the open paths
@@ -93,6 +89,54 @@ function checkAuth(req, res, next) {
 
     next(); // Continue if authenticated
 }
+
+
+app.use((err, req, res, next) => {
+  console.error('Global Error Handler:', err);
+  res.status(500).send('Something went wrong!');
+});
+
+app.use((req, res, next) => {
+  // Log HTTP method and URL
+  console.log('--- Incoming Request ---');
+  console.log(`Method: ${req.method}`);
+  console.log(`URL: ${req.url}`);
+  console.log(`Path: ${req.path}`);
+  console.log(`Protocol: ${req.protocol}`);
+  console.log(`Hostname: ${req.hostname}`);
+  console.log(`IP: ${req.ip}`);
+
+  // Log headers
+  console.log('--- Headers ---');
+  console.log(req.headers);
+
+  // Log query parameters
+  console.log('--- Query Parameters ---');
+  console.log(req.query);
+
+  // Log route parameters (if any)
+  console.log('--- Route Parameters ---');
+  console.log(req.params);
+
+  // Log cookies (requires cookie-parser middleware)
+  if (req.cookies) {
+    console.log('--- Cookies ---');
+    console.log(req.cookies);
+  }
+
+  // Log body (requires body-parser middleware)
+  console.log('--- Body ---');
+  console.log(req.body);
+
+  // Log additional request properties
+  console.log('--- Additional Info ---');
+  console.log(`Base URL: ${req.baseUrl}`);
+  console.log(`Original URL: ${req.originalUrl}`);
+  console.log(`XHR Request: ${req.xhr ? 'Yes' : 'No'}`);
+
+  // Proceed to the next middleware or route handler
+  next();
+});
 
 
 
@@ -216,8 +260,8 @@ app.use('/avail/api/servicerequest', serviceRequestRoutes);
 
 
 app.use((req, res, next) => {
- // console.log(`serv3 before handler Request received at: ${req.url}`);
- // console.log('Request Path:', req.originalUrl);
+  console.log(`serv3 before handler Request received at: ${req.url}`);
+  console.log('Request Path:', req.originalUrl);
   next();
 });
 

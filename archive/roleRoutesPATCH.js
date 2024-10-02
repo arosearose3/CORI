@@ -8,37 +8,25 @@ const router = express.Router();
 const FHIR_BASE_URL = `https://healthcare.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}/fhir`;
 
 
-//-------------------------------------------------
-// Update PractitionerRole
-router.put('/update', async (req, res) => {
-  console.log ("role/update init");
-  
-    const updatedRole = req.body;
-    const accessToken = await getFhirAccessToken();
-    const searchUrl = `${FHIR_BASE_URL}/PractitionerRole/${updatedRole.id}`;
-console.log ("role/update search:"+searchUrl);
-console.log ("role/update obj:"+JSON.stringify(updatedRole));
+//
+// the challenge here is Update requires the entire PractitionerRole object
+// Patch won't but we need to handle multiple possible extension objects.
+// need Patch for roles, availability, and capacity
 
-try {
-    // Make the request using axios
-    const response = await axios.put(searchUrl, updatedRole, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`, // Use the obtained access token
-        'Content-Type': 'application/fhir+json', // Set content type to FHIR-compliant JSON
-        Accept: 'application/fhir+json', // Ensure the response is also FHIR-compliant
-      },
-    });
+//
 
 
-    // Return the full updated PractitionerRole
-    res.status(200).json(response.data); // Ensure you're returning the full updated resource
-  } catch (error) {
-    console.error('Error updating PractitionerRole:', error.message);
-    res.status(500).json({ message: 'Failed to update practitioner role', error: error.message });
-  }
-});
+// working on PATCH. a JSON Patch  document with a content type of application/json-patch+json
+// https://jsonpatch.com/
+// patch operations "op" are add, remove, replace, copy, move, test, 
+//
+
+// Patch an existing Capacity object, in a known practitionerRole
+// This endpoint will take a single PractiionerRole object that has an id. 
+// If no Capacity extension object is found, 'add' using patch.
 
 
+// Patch an existing availableTime object in a PractitionerRole, or add it if not present
 router.patch('/patchAvailability', async (req, res) => {
   console.log("patchAvailability 1");
   const { practitionerRole, availableTime } = req.body;
@@ -109,9 +97,6 @@ router.patch('/patchAvailability', async (req, res) => {
 
 
 router.patch('/patchCapacity', async (req, res) => {
-  // 9/29/24 pulled PATCH as it does not work if there is no extension, no completely
-  // replacing the PractitionerRole resource with the appended or replaced Capacity
-  // 
   const { practitionerRole, capacity } = req.body;
   if (!practitionerRole || !capacity) {
     return res.status(400).json({ error: 'practitionerRole and Capacity object are required.' });
@@ -124,10 +109,6 @@ router.patch('/patchCapacity', async (req, res) => {
   console.log ("patch PR:"+JSON.stringify(practitionerRole));
   console.log ("patch capacity:"+JSON.stringify(capacity));
   try {
-
-    if (!practitionerRole.extension) {
-      practitionerRole.extension = [];  // Initialize if it's undefined
-    }
     // Find the index of the extension with the specific URL
     const extensionIndex = practitionerRole.extension?.findIndex(
       (ext) =>
@@ -135,39 +116,45 @@ router.patch('/patchCapacity', async (req, res) => {
     ) ?? -1;
 
     if (extensionIndex === -1) {
-      practitionerRole.extension.push(capacity);
+      // If the extension is not found, add the new extension
+      patchResource = [
+        {
+          op: 'add',
+          path: '/extension', // '-' indicates adding to the end of the array
+          value: capacity, // New extension object to add
+        },
+      ];
     } else {
-      practitionerRole.extension[extensionIndex] = capacity;
-    }
-    
-    // Proceed with PUT request to replace the entire resource
-    const updateResponse = await fetch('http://localhost:8080/avail/api/role/update', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(practitionerRole)
-    });
-
-
-    // Check if the PUT request was successful
-    if (!updateResponse.ok) {
-      throw new Error('Failed to update PractitionerRole.');
+      // If the extension is found, replace it with the new capacity object
+      patchResource = [
+        {
+          op: 'replace',
+          path: `/extension/${extensionIndex}`,
+          value: capacity, // Replace with the new extension object
+        },
+      ];
     }
 
-    // Parse the response from the `/update` endpoint
-    const updatedPractitionerRole = await updateResponse.json();
-    
-    // Return the updated PractitionerRole to the client
-    res.status(200).json({
-      message: 'PractitionerRole capacity updated successfully',
-      data: updatedPractitionerRole
-    });
+    // Prepare the PATCH request URL and headers
+    const PRId = practitionerRole.id;
+    const searchUrl = `${FHIR_BASE_URL}/PractitionerRole/${PRId}`;
+    const accessToken = await getFhirAccessToken();
 
+    // Perform the PATCH request
+    const response = await axios.patch(searchUrl, patchResource, {
+      headers: {
+        'Content-Type': 'application/json-patch+json',
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/fhir+json',
+      },  
+    });
+    console.log ("patch 5");
+    // Handle the response and send it back
+    const responseJ = await handleBlobResponse(response.data);
+    res.json(responseJ);
   } catch (error) {
-    console.error('patchcap/Error updating PractitionerRole:', error.message);
-    res.status(500).json({
-      error: 'patchcap/Failed to update PractitionerRole',
-      details: error.message
-    });
+    console.error('Error updating PractitionerRoles:', error.message);
+    res.status(500).json({ error: 'Failed to update PractitionerRoles', details: error.message });
   }
 });
 
@@ -307,6 +294,38 @@ router.get('/all', async (req, res) => {
   }
 });
 
+// Update PractitionerRole
+router.put('/update', async (req, res) => {
+  try {
+    const updatedRole = req.body;
+
+    const accessToken = await getFhirAccessToken();
+    const searchUrl = `${FHIR_BASE_URL}/PractitionerRole/${updatedRole.id}`;
+console.log ("role/update search:"+searchUrl);
+console.log ("role/update obj:"+JSON.stringify(updatedRole));
+
+    // Make the request using axios
+    const response = await axios.put(searchUrl, updatedRole, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`, // Use the obtained access token
+        'Content-Type': 'application/fhir+json', // Set content type to FHIR-compliant JSON
+        Accept: 'application/fhir+json', // Ensure the response is also FHIR-compliant
+      },
+    });
+
+/*     const response = await axios.put(url, updatedRole, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/fhir+json',
+      },
+    }); */
+
+    res.status(200).json({ message: 'PractitionerRole updated successfully', data: response.data });
+  } catch (error) {
+    console.error('Error updating PractitionerRole:', error.message);
+    res.status(500).json({ message: 'Failed to update practitioner role', error: error.message });
+  }
+});
 
 
 

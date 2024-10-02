@@ -13,6 +13,8 @@
   let errorMessage = '';
   let practitionerRole = null; //this will be a JSON object with the PR
 
+  let isDataReady = false;
+
   export let currentPractitionerRoleId; // ID passed in from the parent component
 
   // Fetch PractitionerRole details from the server when component mounts or ID changes
@@ -47,7 +49,9 @@
           console.log("Direct PractitionerRole retrieved:", JSON.stringify(roleInfo));
       capacityData = roleInfo.capacity;
       availabilityData = roleInfo.availableTime;
+      console.log ("updatesched/fetchPr/ifPR availabilityData:"+JSON.stringify(availabilityData));
       practitionerName = $user.practitioner.name || 'Unknown Practitioner';
+      isDataReady = true; // Mark data as ready
 
     }
       // Check if the response is a Bundle and extract the PractitionerRole resource
@@ -70,7 +74,9 @@
           console.log("Bundle PractitionerRole retrieved:", JSON.stringify(roleInfo));
         capacityData = roleInfo.capacity;
         availabilityData = roleInfo.availableTime;
+        console.log ("updatesched/fetchPr/Bundle availabilityData:"+JSON.stringify(availabilityData));
         practitionerName = $user.practitioner.name || 'Unknown Practitioner';
+        isDataReady = true; // Mark data as ready
 
       }else {
           errorMessage = 'Failed to retrieve PractitionerRole resource from the Bundle.';
@@ -166,12 +172,19 @@
     <button on:click={handleSubmit}>Submit</button>
     {#if updateMessage}
       <p>{updateMessage}</p>
-
     {/if}
+
+  {#if isDataReady} <!-- Only render Availability when data is ready -->
     <Pick4 on:capacitychange={handleCapacityChange} capacity={capacityData} />
     <br><hr /><br>
     <Availability initialAvailability={availabilityData} on:availabilityUpdate={handleAvailabilityUpdate} />
+  {:else}
+    <p>Loading...</p> <!-- Optional loading message -->
+  {/if}
 
+  {#if errorMessage}
+  <p>{errorMessage}</p>
+{/if}
     <!-- <h3>{errorMessage}</h3> -->
   
 </div>
