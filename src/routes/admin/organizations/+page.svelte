@@ -22,8 +22,8 @@
   let hasFetched = false; // Flag to prevent multiple fetches
 
   // Reactive variables for user data and abilities
-  $: userData = $user.user;
-  $: ability = $abilities;
+   $: userData = $user ? $user.user : null; 
+   $: ability = $abilities;
 
   /**
    * Check if the user has access to a specific subject.

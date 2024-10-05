@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { AbilityBuilder, PureAbility } from '@casl/ability';
+import { navItems } from '$lib/navConfig.js'; // Import the navItems that have roles
 
 // Initialize PureAbility with an empty rule set
 const initialAbilities = new PureAbility([]);
@@ -11,7 +12,6 @@ const initialUserState = {
     email: null,
     name: null,
     picture: null,
-  
   },
   practitioner: {
     id: null,
@@ -20,7 +20,7 @@ const initialUserState = {
     organizationName: null,
     availability: null,
     PractitionerRoleId: null,
-    roles: [],
+    roles: [], // Array to store roles
   },
 };
 
@@ -28,17 +28,16 @@ const initialUserState = {
 const createPersistentStore = (key, startValue) => {
   const store = writable(startValue);
 
-  if (typeof window !== 'undefined') { // Ensure code runs only on the client side
+  if (typeof window !== 'undefined') {
     try {
       const storedValue = localStorage.getItem(key);
       if (storedValue) {
-        store.set(JSON.parse(storedValue)); // Set store with the parsed value from localStorage
+        store.set(JSON.parse(storedValue));
       }
     } catch (error) {
       console.error(`Error reading localStorage key ${key}:`, error);
     }
 
-    // Subscribe to store changes and update localStorage
     store.subscribe(value => {
       try {
         localStorage.setItem(key, JSON.stringify(value));
@@ -58,91 +57,38 @@ export const user = createPersistentStore('userStore', initialUserState);
 export const abilities = writable(new PureAbility([]));
 
 /**
- * Updates abilities based on the user's roles.
+ * Updates abilities based on the user's roles by using navItems.
  * @param {Array<string>} userRoles - The roles assigned to the user.
  */
 export function updateAbilities(userRoles) {
-  if (!userRoles) {
-  //  console.log ("updateAbilites in stores.js - null UserRoles"); 
-    return;}
+  if (!userRoles || !Array.isArray(userRoles)) return;
 
   try {
-    const { can, cannot, build } = new AbilityBuilder(PureAbility);
+    const { can, build } = new AbilityBuilder(PureAbility);
 
-  //  console.log("=== Updating Abilities ===");
-   // console.log("User Roles:", userRoles);
+    // Iterate over navItems and dynamically set abilities based on userRoles
+    navItems.forEach(item => {
+      item.roles.forEach(role => {
+        if (userRoles.includes(role)) {
+          can('view', item.subject); // Grant the user the ability to 'view' the subject for this role
+          console.log(`Role '${role}' can view '${item.subject}'`);
+        }
 
-    if (userRoles.includes('admin')) {
-      can('manage', 'all'); // Admin can do everything
-      console.log("Role 'admin': can manage all");
-    }
-    if (userRoles.includes('orgadmin')) {
-      can('manage', 'Settings');
-      can('manage', 'Consents');
-      can('manage', 'Notifications');
-      can('manage', 'Messages');
-      can('manage', 'Referrals');
-      can('manage', 'Organization Clients')
-      can('manage', 'Organization Staff')
-      can('manage', 'Organization Admin')
-
-      console.log("Role 'org_admin': can manage multiple subjects");
-    }
-    if (userRoles.includes('supervisor')) {
-      can('view', 'ProviderReferrals');
-      can('manage', 'Provenance');
-      console.log("Role 'supervisor': can view ProviderReferrals and manage Provenance");
-    }
-    if (userRoles.includes('provider')) {
-      can('view', 'Capacity');
-      can('view', 'Settings');
-  //    can('view', 'Consents');
-  //    can('view', 'Notifications');
-  //    can('view', 'Messages');
-  //    can('view', 'Referrals');
-  //    can('view', 'OrganizationSearch');
-  //    can('create', 'Referrals');
-  //    can('manage', 'DemoData');
-      can('manage', 'AvailabilityCapacity');
-  //    can('manage', 'Provider Clients');
-      console.log("Role 'provider': can view Referrals and manage DemoData & AvailabilityCapacity");
-    }
-    if (userRoles.includes('coordinator')) {
-      can('manage', 'Referrals');
-      can('create', 'Referrals');
-      can('view', 'Referrals');
-      console.log("Role 'coordinator': can manage, create, and view Referrals");
-    }
-    if (userRoles.includes('referrer')) {
-      can('manage', 'Referrals');
-      can('create', 'Referrals');
-      can('changeStatus', 'Referrals');
-      can('view', 'Referrals');
-      console.log("Role 'referrer': can manage, create, change status, and view Referrals");
-    }
-    if (userRoles.includes('client')) {
-      can('manage', 'Referrals');
-      can('referSelf', 'Referrals');
-      can('deleteSelf', 'Referrals');
-      can('getHistory', 'Referrals');
-      can('revokeConsents', 'Consents');
-      can('leaveReferral', 'Referrals');
-      can('view', 'OwnRecords');
-      can('view', 'InsuranceInfo');
-
-      can('view', 'ServiceRequests');
-      can('view', 'Consents');
-      can('view', 'Client Settings');
-      can('view', 'OrganizationSearch');
-      can('view', 'Notifications');
-      can('view', 'Messages');
-      console.log("Role 'client': various manage and view permissions");
-    }
+        // If the item has subItems, iterate through them as well
+        if (item.subItems) {
+          item.subItems.forEach(subItem => {
+            if (userRoles.includes(role)) {
+              can('view', subItem.subject);
+              console.log(`Role '${role}' can view '${subItem.subject}'`);
+            }
+          });
+        }
+      });
+    });
 
     const builtAbility = build();
     abilities.set(builtAbility);
-    //console.log("=== Abilities Updated ===");
-    //console.log("Ability Rules:", builtAbility.rules);
+    console.log("=== Abilities Updated ===");
   } catch (error) {
     console.error('Error updating abilities:', error);
   }
@@ -159,26 +105,8 @@ export function setUser(userData) {
   }
 
   user.update(store => {
-    // Initialize the store if it's null or undefined
     if (!store) {
-      store = {
-        user: {
-          id: null,
-          email: null,
-          name: null,
-          picture: null,
-          roles: [], // Ensure roles array is present
-        },
-        practitioner: {
-          id: null,
-          name: null,
-          organizationId: null,
-          organizationName: null,
-          availability: null,
-          PractitionerRoleId: null,
-          roles: [],
-        },
-      };
+      store = initialUserState;
     }
 
     // Update user information
@@ -187,12 +115,13 @@ export function setUser(userData) {
       email: userData.email || null,
       name: userData.name || null,
       picture: userData.picture || null,
-      roles: userData.roles || [], // Ensure roles are included
+      roles: userData.roles || [],
     };
 
     // Update abilities based on roles
     updateAbilities(store.user.roles);
-    return store; // Return the updated store
+
+    return store;
   });
 }
 
@@ -216,8 +145,10 @@ export function setPractitioner(practitionerData) {
       PractitionerRoleId: practitionerData.PractitionerRoleId || null,
       roles: Array.isArray(practitionerData.roles) ? practitionerData.roles : [],
     };
-   // console.log("Practitioner Store Updated:", store.practitioner);
-   // console.log("Full Practitioner Object:", store.practitioner); // Log the full practitioner object
+
+    // Update abilities based on practitioner roles
+    updateAbilities(store.practitioner.roles);
+
     return store;
   });
 }
@@ -242,6 +173,7 @@ export function clearFhirStore() {
       organizationName: null,
       availability: null,
       PractitionerRoleId: null,
+      roles: [],
     };
     console.log("Practitioner Store Cleared:", store.practitioner);
     return store;

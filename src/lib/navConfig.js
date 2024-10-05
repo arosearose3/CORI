@@ -1,5 +1,3 @@
-// src/lib/navConfig.js
-
 import { base } from '$app/paths'; // Import the base path
 
 export const navItems = [
@@ -8,121 +6,134 @@ export const navItems = [
     icon: '⚙️',
     path: `${base}/clients/provider`,
     subject: 'Provider Clients',
+    roles: ['provider', 'admin'], // Accessible by provider and admin roles
   },
   {
-    label: 'Organization Clients',
+    label: 'Clients',
     icon: '⚙️',
     path: `${base}/clients/orgadmin`,
     subject: 'Organization Clients',
+    roles: ['orgadmin', 'admin'], // Accessible by orgadmin and admin roles
   },
   {
     label: 'Cori Clients',
     icon: '⚙️',
     path: `${base}/clients/admin`,
     subject: 'Cori Clients',
+    roles: ['admin'], // Accessible only by admin
   },
   {
-    label: 'Organization Staff',
-    icon: '⚙️',
-    path: `${base}/staff/admin`,
-    subject: 'Organization Staff',
-  },
-  {
-    label: 'Organization Admin',
+    label: 'Staff',
     icon: '⚙️',
     path: `${base}/staff/orgadmin`,
-    subject: 'Organization Admin',
+    subject: 'Organization Staff',
+    roles: ['orgadmin'], // Accessible by orgadmin and admin roles
   },
   {
-    label: 'Cori Staff',
+    label: 'Organization Settings',
+    icon: '⚙️',
+    path: `${base}/staff/orgadmin`,
+    subject: 'Organization Settings',
+    roles: ['orgadmin', 'admin'], // Accessible by orgadmin and admin roles
+  },
+  {
+    label: 'All Cori Staff',
     icon: '⚙️',
     path: `${base}/staff/admin`,
     subject: 'Cori Staff',
+    roles: ['admin'], // Accessible only by admin
   },
   {
     label: 'Settings',
     icon: '⚙️',
-    path: `${base}/usersettings`,
-    subject: 'User Settings',
-    subItems: [
-      { label: 'SMS', path: `${base}/settings/sms`, subject: 'SMSSettings' },
-      { label: 'Email', path: `${base}/settings/email`, subject: 'EmailSettings' },
-      { label: 'Government Name', path: `${base}/settings/govt-name`, subject: 'GovernmentName' },
-      { label: 'Preferred Name', path: `${base}/settings/preferred-name`, subject: 'PreferredName' },
-      { label: 'Pronouns', path: `${base}/settings/pronouns`, subject: 'Pronouns' },
-      { label: 'Demo Data', path: `${base}/settings/demo-data`, subject: 'DemoData' },
-    ]
+    path: `${base}/settings/admin`,
+    subject: 'Admin Settings',
+    roles: ['admin'], // Accessible by multiple roles
+
   },
+  {
+    label: 'Settings',
+    icon: '⚙️',
+    path: `${base}/settings/org`,
+    subject: 'Org Settings',
+    roles: ['orgadmin'], // Accessible by multiple roles
+
+  },
+  {
+    label: 'Settings',
+    icon: '⚙️',
+    path: `${base}/settings/provider`,
+    subject: 'Provider Settings',
+    roles: ['provider'], // Accessible by multiple roles
+
+  },
+  {
+    label: 'Settings',
+    icon: '⚙️',
+    path: `${base}/settings/client`,
+    subject: 'Client Settings',
+    roles: ['client'], // Accessible by multiple roles
+
+  },
+  
   {
     label: 'Consents',
     icon: '✅',
     path: `${base}/consents`,
     subject: 'Consents',
-    subItems: [
-      { label: 'SMS Consents', path: `${base}/consents/sms`, subject: 'SMSConsents' },
-      { label: 'Email Consents', path: `${base}/consents/email`, subject: 'EmailConsents' },
-      { label: 'ROIs', path: `${base}/consents/rois`, subject: 'ROIs' },
-    ]
+    roles: ['client', 'provider', 'orgadmin','admin'],
+
   },
   {
     label: 'Organization Search',
     icon: '🔍',
     path: `${base}/organizationsearch`,
-    subject: 'OrganizationSearch',
+    subject: 'Organization Search',
+    roles: ['provider', 'admin', 'orgadmin'],
   },
   {
     label: 'Notifications',
     icon: '🔔',
     path: `${base}/notifications`,
     subject: 'Notifications',
-    subItems: [
-      { label: 'Read Notifications', path: `${base}/notifications/read`, subject: 'ReadNotifications' },
-      { label: 'Delete Notifications', path: `${base}/notifications/delete`, subject: 'DeleteNotifications' },
-    ]
+    roles: ['client','orgadmin', 'admin', 'provider'],
+
   },
   {
     label: 'Messages',
     icon: '✉️',
     path: `${base}/messages`,
     subject: 'Messages',
-    subItems: [
-      { label: 'Create Message', path: `${base}/messages/create`, subject: 'CreateMessage' },
-      { label: 'Read Messages', path: `${base}/messages/read`, subject: 'ReadMessages' },
-      { label: 'Reply Message', path: `${base}/messages/reply`, subject: 'ReplyMessage' },
-      { label: 'Forward Message', path: `${base}/messages/forward`, subject: 'ForwardMessage' },
-      { label: 'Delete Message', path: `${base}/messages/delete`, subject: 'DeleteMessage' },
-    ]
+    roles: ['client', 'provider','orgadmin', 'admin'],
   },
   {
     label: 'Capacity and Availability',
     icon: '✉️',
     path: `${base}/capacity`,
     subject: 'Capacity',
+    roles: ['provider', 'admin'], // Accessible by provider and admin roles
+  },
+  {
+    label: 'Staff Capacity and Availability',
+    icon: '✉️',
+    path: `${base}/org/capacity`,
+    subject: 'Capacity',
+    roles: ['orgadmin'], // Accessible by provider and admin roles
   },
   {
     label: 'Referrals',
     icon: '📄',
     path: `${base}/referrals`,
     subject: 'Referrals',
-    subItems: [
-      { label: 'Create Referral', path: `${base}/referrals/create`, subject: 'CreateReferral' },
-      { label: 'Delete Referral', path: `${base}/referrals/delete`, subject: 'DeleteReferral' },
-      { label: 'Referral History', path: `${base}/referrals/history`, subject: 'ReferralHistory' },
-      { label: 'Revoke Consents', path: `${base}/referrals/revoke-consents`, subject: 'RevokeConsents' },
-      { label: 'Leave Referral', path: `${base}/referrals/leave`, subject: 'LeaveReferral' },
-      { label: 'Own Records', path: `${base}/referrals/own-records`, subject: 'OwnRecords' },
-      { label: 'Insurance Info', path: `${base}/referrals/insurance-info`, subject: 'InsuranceInfo' },
-    ]
+    roles: ['client', 'provider','org admin', 'admin'],
+
   },
   {
-    label: 'Admin',
+    label: 'All Cori Organizations',
     icon: '🛠️',
     path: `${base}/admin/organizations`,
     subject: 'Admin',
-    subItems: [
-      { label: 'All Organizations', path: `${base}/admin/organizations`, subject: 'AllOrganizations' },
-      { label: 'All Staff', path: `${base}/admin/staff`, subject: 'AllStaff' },
-      { label: 'All Referrals', path: `${base}/admin/referrals`, subject: 'AllReferrals' },
-    ]
+    roles: ['admin'], // Accessible only by admin
+
   },
 ];

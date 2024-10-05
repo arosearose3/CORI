@@ -238,6 +238,55 @@
   
       return lines;
     }
+
+  
+  
+  /**
+   * Parses a time string "HH:MM:SS" into minutes since 7 AM.
+   * @param {string} timeStr - The time string to parse.
+   * @returns {number} - Minutes since 7 AM.
+   */
+  function parseTimeToMinutes(timeStr) {
+    const [hour, minute, second] = timeStr.split(':').map(Number);
+    const totalMinutes = (hour * 60 + minute) - 420; // 7 AM is 420 minutes from midnight
+    // Ensure the minutes are within 0 to 780 (7 AM to 8 PM)
+    return Math.max(0, Math.min(780, totalMinutes));
+  }
+
+  /**
+   * Computes the bar segments for the availability bar.
+   * @param {Array} availableTimes - The practitioner's available times.
+   * @returns {Array|null} - An array of segments or null if no availability.
+   */
+  function getBarSegments(availableTimes) {
+    if (!availableTimes || availableTimes.length === 0) return null;
+
+    let isAllDay = false;
+    let segments = [];
+
+    availableTimes.forEach(time => {
+      if (time.allDay) {
+        isAllDay = true;
+      } else {
+        const startMinutes = time.availableStartTime ? parseTimeToMinutes(time.availableStartTime) : null;
+        const endMinutes = time.availableEndTime ? parseTimeToMinutes(time.availableEndTime) : null;
+        if (startMinutes !== null && endMinutes !== null) {
+          segments.push({ start: startMinutes, end: endMinutes });
+        }
+      }
+    });
+
+    if (isAllDay) {
+      // Return a segment covering the entire day
+      return [{ start: 0, end: 780 }]; // 780 minutes from 7 AM to 8 PM
+    } else if (segments.length > 0) {
+      return segments;
+    } else {
+      return null; // No valid availability segments
+    }
+  }
+
+
   </script>
   
   <style>
@@ -277,50 +326,73 @@
       font-size: 0.9em;
       color: #555;
     }
+
+
+  .availability-bar {
+    position: relative;
+    height: 20px;
+    background-color: lightblue; /* Light blue background for the bar */
+    width: 100%;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+  }
+
+  .availability-segment {
+    position: absolute;
+    height: 100%;
+    background-color: darkblue; /* Dark blue for available time ranges */
+  }
+
   </style>
-  
   <!-- Table UI -->
-  {#if practitioners.length > 0}
-    <table>
-      <thead>
+{#if practitioners.length > 0}
+<table>
+  <thead>
+    <tr>
+      <th></th>
+      <th on:click={() => sortTable('name')}>Practitioner Name</th>
+      <th on:click={() => sortTable('birthDate')}>Date of Birth</th>
+      <th on:click={() => sortTable('kids')}>Kids</th>
+      <th on:click={() => sortTable('teens')}>Teens</th>
+      <th on:click={() => sortTable('adults')}>Adults</th>
+      <th on:click={() => sortTable('couples')}>Couples</th>
+      <th on:click={() => sortTable('families')}>Families</th>
+    </tr>
+  </thead>
+  <tbody>
+    {#each practitioners as practitioner}
+      <tr>
+        <td>
+          <span class="delete-btn" on:click={() => handleDelete(practitioner.id)}>🗑️</span>
+        </td>
+        <td>{practitioner.name}</td>
+        <td>{practitioner.birthDate}</td>
+        <td>{practitioner.kids}</td>
+        <td>{practitioner.teens}</td>
+        <td>{practitioner.adults}</td>
+        <td>{practitioner.couples}</td>
+        <td>{practitioner.families}</td>
+      </tr>
+      {#if getBarSegments(practitioner.availableTimes)}
         <tr>
-          <th></th>
-          <th on:click={() => sortTable('name')}>Practitioner Name</th>
-          <th on:click={() => sortTable('birthDate')}>Date of Birth</th>
-          <th on:click={() => sortTable('kids')}>Kids</th>
-          <th on:click={() => sortTable('teens')}>Teens</th>
-          <th on:click={() => sortTable('adults')}>Adults</th>
-          <th on:click={() => sortTable('couples')}>Couples</th>
-          <th on:click={() => sortTable('families')}>Families</th>
+          <td colspan="8">
+            <div class="availability-bar">
+              {#each getBarSegments(practitioner.availableTimes) as segment}
+                <div
+                  class="availability-segment"
+                  style="
+                    left: {segment.start / 780 * 100}%;
+                    width: {(segment.end - segment.start) / 780 * 100}%;
+                  "
+                ></div>
+              {/each}
+            </div>
+          </td>
         </tr>
-      </thead>
-      <tbody>
-        {#each practitioners as practitioner}
-          <tr>
-            <td>
-              <span class="delete-btn" on:click={() => handleDelete(practitioner.id)}>🗑️</span>
-            </td>
-            <td>
-              {practitioner.name}
-              {#if practitioner.availableTimes.length > 0}
-                <div class="available-times">
-                  {#each getFormattedAvailableTimes(practitioner.availableTimes) as line}
-                    <div>{line}</div>
-                  {/each}
-                </div>
-              {/if}
-            </td>
-            <td>{practitioner.birthDate}</td>
-            <td>{practitioner.kids}</td>
-            <td>{practitioner.teens}</td>
-            <td>{practitioner.adults}</td>
-            <td>{practitioner.couples}</td>
-            <td>{practitioner.families}</td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  {:else}
-    <p class="message">{message || 'No practitioners found.'}</p>
-  {/if}
-  
+      {/if}
+    {/each}
+  </tbody>
+</table>
+{:else}
+<p class="message">{message || 'No practitioners found.'}</p>
+{/if}

@@ -179,7 +179,7 @@ const unsubscribeUser = user.subscribe(async value => {
     console.log('handleLogout called with base:', base);
     try {
       const result = await logoutGoogleUser(base);
-      if (result.success) {
+      if (result && result.success) {
         isUserAuthenticated = false;
         if (isFhirAuthenticated) {
           await disconnectFhirAuth(base);

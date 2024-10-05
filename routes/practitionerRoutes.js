@@ -14,7 +14,7 @@ router.get('/findWithEmail', async (req, res) => {
   const { email } = req.query;
   if (!email) {
     return res.status(400).json({ error: 'Email is required.' });
-  }
+  } 
   try {
     // Construct the FHIR search URL with the correct telecom query parameter format
     const accessToken = await getFhirAccessToken();

@@ -63,7 +63,26 @@ app.use(session({
 }));
 
 
+app.post(`${BASE_PATH}/api/send-sms`, async (req, res) => {
+  const { message, phoneNumber } = req.body;
 
+  if (!message || !phoneNumber) {
+    return res.status(400).json({ error: 'Message and phone number are required' });
+  }
+
+  try {
+    const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    const result = await client.messages.create({
+      body: message,
+      messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
+      to: phoneNumber
+    });
+    res.status(200).json({ sid: result.sid });
+  } catch (error) {
+    console.error('Error sending SMS:', error);
+    res.status(500).json({ error: 'Failed to send SMS' });
+  }
+});
 
 // Google OAuth Routes
 app.get(`${BASE_PATH}/auth/google/url`, (req, res) => {
