@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { base } from '$app/paths'; // Import base path
 
   let practitioners = [];
   let organizations = [];
@@ -18,7 +19,7 @@
   // Function to fetch practitioners and transform the FHIR response
   async function fetchPractitioners() {
     try {
-      const response = await fetch('/avail/api/practitioner/all');
+      const response = await fetch(`${base}/api/practitioner/all`);
       const data = await response.json();
 
       // Check if the response is a FHIR bundle and has entries
@@ -42,7 +43,7 @@
   // Function to fetch all organizations
   async function fetchOrganizations() {
     try {
-      const response = await fetch('/avail/api/organization/all');
+      const response = await fetch(`${base}/api/organization/all`);
       const data = await response.json();
 
       // Check if the response is an array of organizations
@@ -63,7 +64,7 @@
   // Fetch PractitionerRoles for the selected practitioner
   async function fetchPractitionerRoles(practitionerId) {
     try {
-      const response = await fetch(`/avail/api/role/PractitionerRole?practitioner=Practitioner/${practitionerId}`);
+      const response = await fetch(`${base}/api/role/PractitionerRole?practitioner=Practitioner/${practitionerId}`);
       const data = await response.json();
 
       // Check if the response is a FHIR bundle and has entries
@@ -123,7 +124,7 @@
 
   try {
     // Send the request to create a new PractitionerRole
-    const response = await fetch(`/avail/api/role/create`, {
+    const response = await fetch(`${base}/api/role/create`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

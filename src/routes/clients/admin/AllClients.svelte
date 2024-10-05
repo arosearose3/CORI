@@ -1,6 +1,7 @@
 <script>
     import { onMount } from 'svelte';
-  
+    import { base } from '$app/paths'; // Import base path
+
     let patients = [];
     let message = '';
     let sortKey = 'name'; // Default sorting by name
@@ -21,7 +22,7 @@
     // Fetch patients from the API
     async function fetchPatients() {
       try {
-        const response = await fetch('/avail/api/patient/all');
+        const response = await fetch(`${base}/api/patient/all`);
         const data = await response.json();
   
         // Check if the response is a valid FHIR Bundle

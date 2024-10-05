@@ -1,5 +1,6 @@
 <script>
     import { onMount } from 'svelte';
+    import { base } from '$app/paths'; // Import base path
     let practitioners = [];
     let message = '';
     let sortField = 'name';
@@ -13,7 +14,7 @@
     // Fetch practitioners from the API
     async function fetchPractitioners() {
       try {
-        const response = await fetch('/avail/api/practitioner/all');
+        const response = await fetch(`${base}/api/practitioner/all`);
         const data = await response.json();
   
         if (data.resourceType === 'Bundle' && Array.isArray(data.entry)) {

@@ -1,4 +1,6 @@
 <script>
+  import { base } from '$app/paths'; // Import base path
+  
     // Initial client (patient) object to bind form fields to
     let client = {
       identifier: '',

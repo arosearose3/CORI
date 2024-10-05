@@ -1,6 +1,7 @@
 <script>
     import { onMount } from 'svelte';
-  
+    import { base } from '$app/paths'; // Import base path
+
     let givenName = '';
     let familyName = '';
     let email = '';
@@ -27,7 +28,7 @@
       };
   
       try {
-        const response = await fetch('/avail/api/practitioner/add', {
+        const response = await fetch(`${base}/api/practitioner/add`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

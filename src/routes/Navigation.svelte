@@ -1,6 +1,7 @@
 <script>
   import { navItems } from '$lib/navConfig.js';
   import { user, abilities } from '$lib/stores.js';
+  import { base } from '$app/paths'; // Import base path
 
   export let isUserAuthenticated;
   export let handleLogin;
@@ -30,10 +31,10 @@
 <nav class="navigation">
 
   <div class="nav-section">
-    <a class="nav-link" href="/avail/demoflow" aria-label="Task Flow Demo">
+    <a class="nav-link" href={base}/demoflow aria-label="Task Flow Demo">
       "Task Flow Demo"
     </a>
-    <a class="nav-link" href="/avail/capacity" aria-label="Availability/Capacity Demo">
+    <a class="nav-link" href={base}/capacity aria-label="Availability/Capacity Demo">
       "Availability/Capacity Demo"
     </a>
   </div>

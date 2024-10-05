@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import Switch from './Switch.svelte';
+  import { base } from '$app/paths'; // Import base path
 
   // State variables
   let textConsent = false; // Boolean value (source of truth)
@@ -29,7 +30,7 @@
   // Handlers for getting and updating email and SMS settings
   async function getSMS() {
     try {
-      const response = await fetch('/avail/api/settings/getSMS', { method: 'GET' });
+      const response = await fetch(`${base}/api/settings/getSMS`, { method: 'GET' });
       if (response.ok) {
         const data = await response.json();
         textConsent = data.consent ?? false;
@@ -45,7 +46,7 @@
 
   async function getEmail() {
     try {
-      const response = await fetch('/avail/api/settings/getEmail', { method: 'GET' });
+      const response = await fetch(`${base}/api/settings/getEmail`, { method: 'GET' });
       if (response.ok) {
         const data = await response.json();
         notificationEmail = data.email || '';
@@ -59,7 +60,7 @@
 
   async function updateSMS() {
     try {
-      const response = await fetch('/avail/api/settings/updateSMS', {
+      const response = await fetch(`${base}/api/settings/updateSMS`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ consent: textConsent, phoneNumber: phoneNumber }),
@@ -77,7 +78,7 @@
 
   async function updateEmail() {
     try {
-      const response = await fetch('/avail/api/settings/updateEmail', {
+      const response = await fetch(`${base}/api/settings/updateEmail`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: notificationEmail }),

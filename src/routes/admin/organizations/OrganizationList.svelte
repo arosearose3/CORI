@@ -3,7 +3,8 @@
   export let organizations = [];
   export let practitionerRoles = [];
   export let selectPractitionerRole;
-
+  import { base } from '$app/paths'; // Import base path
+  
   import { onMount } from 'svelte';
 
   let isSelectingRole = false;

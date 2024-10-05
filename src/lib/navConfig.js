@@ -1,134 +1,128 @@
 // src/lib/navConfig.js
-// { label: 'All Organizations', path: '/avail/admin/organizations', subject: 'AllOrganizations' },
-export const navItems = [
 
+import { base } from '$app/paths'; // Import the base path
+
+export const navItems = [
   {
     label: 'Clients',
     icon: '⚙️',
-    path: '/avail/clients/provider',
+    path: `${base}/clients/provider`,
     subject: 'Provider Clients',
-
   },
   {
     label: 'Organization Clients',
     icon: '⚙️',
-    path: '/avail/clients/orgadmin',
+    path: `${base}/clients/orgadmin`,
     subject: 'Organization Clients',
-
   },
   {
     label: 'Cori Clients',
     icon: '⚙️',
-    path: '/avail/clients/admin',
+    path: `${base}/clients/admin`,
     subject: 'Cori Clients',
-
   },
   {
     label: 'Organization Staff',
     icon: '⚙️',
-    path: '/avail/staff/admin',
+    path: `${base}/staff/admin`,
     subject: 'Organization Staff',
-
   },
   {
     label: 'Organization Admin',
     icon: '⚙️',
-    path: '/avail/staff/orgadmin',
+    path: `${base}/staff/orgadmin`,
     subject: 'Organization Admin',
-
   },
   {
     label: 'Cori Staff',
     icon: '⚙️',
-    path: '/avail/staff/admin',
+    path: `${base}/staff/admin`,
     subject: 'Cori Staff',
-
   },
   {
     label: 'Settings',
     icon: '⚙️',
-    path: '/avail/usersettings',
+    path: `${base}/usersettings`,
     subject: 'User Settings',
     subItems: [
-      { label: 'SMS', path: '/settings/sms', subject: 'SMSSettings' },
-      { label: 'Email', path: '/settings/email', subject: 'EmailSettings' },
-      { label: 'Government Name', path: '/settings/govt-name', subject: 'GovernmentName' },
-      { label: 'Preferred Name', path: '/settings/preferred-name', subject: 'PreferredName' },
-      { label: 'Pronouns', path: '/settings/pronouns', subject: 'Pronouns' },
-      { label: 'Demo Data', path: '/settings/demo-data', subject: 'DemoData' },
+      { label: 'SMS', path: `${base}/settings/sms`, subject: 'SMSSettings' },
+      { label: 'Email', path: `${base}/settings/email`, subject: 'EmailSettings' },
+      { label: 'Government Name', path: `${base}/settings/govt-name`, subject: 'GovernmentName' },
+      { label: 'Preferred Name', path: `${base}/settings/preferred-name`, subject: 'PreferredName' },
+      { label: 'Pronouns', path: `${base}/settings/pronouns`, subject: 'Pronouns' },
+      { label: 'Demo Data', path: `${base}/settings/demo-data`, subject: 'DemoData' },
     ]
   },
   {
     label: 'Consents',
     icon: '✅',
-    path: '/avail/consents',
+    path: `${base}/consents`,
     subject: 'Consents',
     subItems: [
-      { label: 'SMS Consents', path: '/consents/sms', subject: 'SMSConsents' },
-      { label: 'Email Consents', path: '/consents/email', subject: 'EmailConsents' },
-      { label: 'ROIs', path: '/consents/rois', subject: 'ROIs' },
+      { label: 'SMS Consents', path: `${base}/consents/sms`, subject: 'SMSConsents' },
+      { label: 'Email Consents', path: `${base}/consents/email`, subject: 'EmailConsents' },
+      { label: 'ROIs', path: `${base}/consents/rois`, subject: 'ROIs' },
     ]
   },
   {
     label: 'Organization Search',
     icon: '🔍',
-    path: '/avail/organizationsearch',
+    path: `${base}/organizationsearch`,
     subject: 'OrganizationSearch',
   },
   {
     label: 'Notifications',
     icon: '🔔',
-    path: '/avail/notifications',
+    path: `${base}/notifications`,
     subject: 'Notifications',
     subItems: [
-      { label: 'Read Notifications', path: '/notifications/read', subject: 'ReadNotifications' },
-      { label: 'Delete Notifications', path: '/notifications/delete', subject: 'DeleteNotifications' },
+      { label: 'Read Notifications', path: `${base}/notifications/read`, subject: 'ReadNotifications' },
+      { label: 'Delete Notifications', path: `${base}/notifications/delete`, subject: 'DeleteNotifications' },
     ]
   },
   {
     label: 'Messages',
     icon: '✉️',
-    path: '/avail/messages',
+    path: `${base}/messages`,
     subject: 'Messages',
     subItems: [
-      { label: 'Create Message', path: '/messages/create', subject: 'CreateMessage' },
-      { label: 'Read Messages', path: '/messages/read', subject: 'ReadMessages' },
-      { label: 'Reply Message', path: '/messages/reply', subject: 'ReplyMessage' },
-      { label: 'Forward Message', path: '/messages/forward', subject: 'ForwardMessage' },
-      { label: 'Delete Message', path: '/messages/delete', subject: 'DeleteMessage' },
+      { label: 'Create Message', path: `${base}/messages/create`, subject: 'CreateMessage' },
+      { label: 'Read Messages', path: `${base}/messages/read`, subject: 'ReadMessages' },
+      { label: 'Reply Message', path: `${base}/messages/reply`, subject: 'ReplyMessage' },
+      { label: 'Forward Message', path: `${base}/messages/forward`, subject: 'ForwardMessage' },
+      { label: 'Delete Message', path: `${base}/messages/delete`, subject: 'DeleteMessage' },
     ]
   },
   {
     label: 'Capacity and Availability',
     icon: '✉️',
-    path: '/avail/capacity',
+    path: `${base}/capacity`,
     subject: 'Capacity',
-
   },
   {
     label: 'Referrals',
     icon: '📄',
-    path: '/avail/referrals',
+    path: `${base}/referrals`,
     subject: 'Referrals',
     subItems: [
-      { label: 'Create Referral', path: '/avail/referrals/create', subject: 'CreateReferral' },
-      { label: 'Delete Referral', path: '/avail/referrals/delete', subject: 'DeleteReferral' },
-      { label: 'Referral History', path: '/avail/referrals/history', subject: 'ReferralHistory' },
-      { label: 'Revoke Consents', path: '/avail/referrals/revoke-consents', subject: 'RevokeConsents' },
-      { label: 'Leave Referral', path: '/avail/referrals/leave', subject: 'LeaveReferral' },
-      { label: 'Own Records', path: '/avail/referrals/own-records', subject: 'OwnRecords' },
-      { label: 'Insurance Info', path: '/avail/referrals/insurance-info', subject: 'InsuranceInfo' },
+      { label: 'Create Referral', path: `${base}/referrals/create`, subject: 'CreateReferral' },
+      { label: 'Delete Referral', path: `${base}/referrals/delete`, subject: 'DeleteReferral' },
+      { label: 'Referral History', path: `${base}/referrals/history`, subject: 'ReferralHistory' },
+      { label: 'Revoke Consents', path: `${base}/referrals/revoke-consents`, subject: 'RevokeConsents' },
+      { label: 'Leave Referral', path: `${base}/referrals/leave`, subject: 'LeaveReferral' },
+      { label: 'Own Records', path: `${base}/referrals/own-records`, subject: 'OwnRecords' },
+      { label: 'Insurance Info', path: `${base}/referrals/insurance-info`, subject: 'InsuranceInfo' },
     ]
   },
   {
     label: 'Admin',
     icon: '🛠️',
-    path: '/avail/admin/organizations',
+    path: `${base}/admin/organizations`,
     subject: 'Admin',
     subItems: [
-      { label: 'All Organizations', path: '/avail/admin/organizations', subject: 'AllOrganizations' },
-      { label: 'All Staff', path: '/avail/admin/staff', subject: 'AllStaff' },
-      { label: 'All Referrals', path: '/avail/admin/referrals', subject: 'AllReferrals' },
+      { label: 'All Organizations', path: `${base}/admin/organizations`, subject: 'AllOrganizations' },
+      { label: 'All Staff', path: `${base}/admin/staff`, subject: 'AllStaff' },
+      { label: 'All Referrals', path: `${base}/admin/referrals`, subject: 'AllReferrals' },
     ]
   },
 ];

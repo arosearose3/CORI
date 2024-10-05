@@ -1,5 +1,7 @@
 import express from 'express';
 import { auth, healthcare, PROJECT_ID, LOCATION, DATASET_ID, FHIR_STORE_ID, handleBlobResponse } from '../serverutils.js';
+import { BASE_PATH } from '../serverutils.js'; // Adjust the path as necessary
+
 
 import { getFhirAccessToken } from '../src/lib/auth/auth.js'; // Adjust the path as needed
 const router = express.Router();

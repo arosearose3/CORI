@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { base } from '$app/paths'; // Import base path
 
    let organizations = [];
 
@@ -26,7 +27,7 @@
 
   async function fetchOrganizations() {
     try {
-      const response = await fetch('/avail/api/organization/all');
+      const response = await fetch(`${base}/api/organization/all`);
       const data = await response.json();
 
       // Check if the response is an array of organizations
@@ -47,7 +48,7 @@
   // Fetch practitioners function
   async function fetchPractitioners() {
     try {
-      const response = await fetch('/avail/api/practitioner/all');
+      const response = await fetch(`${base}/api/practitioner/all`);
       const data = await response.json();
 
       if (data.resourceType === 'Bundle' && Array.isArray(data.entry)) {
@@ -88,7 +89,7 @@
         roles: selectedRoles,
       };
 
-      const response = await fetch('/avail/api/role/patchRoles', {
+      const response = await fetch(`${base}/api/role/patchRoles`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

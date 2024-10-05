@@ -1,4 +1,7 @@
 <script>
+
+import { base } from '$app/paths'; // Import base path
+
   let organizationData = {
     active: true,
     type: [{ coding: [{ code: 'prov', system: 'http://terminology.hl7.org/CodeSystem/organization-type' }] }],
@@ -95,7 +98,7 @@
   async function handleSubmit() {
     if (validateForm()) {
       try {
-        const response = await fetch('/avail/api/organization/add', {
+        const response = await fetch(`${base}/api/organization/add`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

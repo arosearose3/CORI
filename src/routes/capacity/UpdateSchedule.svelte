@@ -3,6 +3,7 @@
   import { user } from '$lib/stores.js';
   import Pick4 from './Pick4.svelte';
   import Availability from './Availability.svelte';
+  import { base } from '$app/paths'; // Import base path
 
   // Component state variables
 
@@ -28,7 +29,7 @@
       console.log ("in fetch 1 PRid:"+practitionerRoleId);
 
 
-      const response = await fetch(`/avail/api/role/getOne?id=${practitionerRoleId}`);
+      const response = await fetch(`${base}/api/role/getOne?id=${practitionerRoleId}`);
       const data = await response.json();
       console.log ("in fetch 2 data:"+JSON.stringify(data));
 
@@ -106,7 +107,7 @@
         };
       }
 
-      const response = await fetch('/avail/api/role/patchCapacity', {
+      const response = await fetch(`${base}/api/role/patchCapacity`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -129,7 +130,7 @@
      // Handle patching availability
      try{
      if (availabilityData && availabilityData.length > 0) {
-      const availabilityResponse = await fetch('/avail/api/role/patchAvailability', {
+      const availabilityResponse = await fetch(`${base}/api/role/patchAvailability`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

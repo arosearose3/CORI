@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { user, actions } from '$lib/stores'; // Import the combined store and actions
+  import { base } from '$app/paths'; // Import base path
 
   let roles = [];
   let sortColumn = 'practitioner';
@@ -21,7 +22,7 @@
   async function fetchRoles() {
     loading = true;
     try {
-      const response = await fetch('/avail/api/role/all', {
+      const response = await fetch(`${base}/api/role/all`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include' // Include credentials if necessary
@@ -41,7 +42,7 @@
             // Extract Practitioner ID
             const practitionerId = role.practitioner.reference.split('/')[1];
             // Fetch Practitioner details
-            const practitionerResponse = await fetch(`/avail/api/practitioner/${practitionerId}`, {
+            const practitionerResponse = await fetch(`${base}/api/practitioner/${practitionerId}`, {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include' // Include credentials if necessary
@@ -57,7 +58,7 @@
             // Extract Organization ID
             const organizationId = role.organization.reference.split('/')[1];
             // Fetch Organization details
-            const organizationResponse = await fetch(`/avail/api/organization/${organizationId}`, {
+            const organizationResponse = await fetch(`${base}/api/organization/${organizationId}`, {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include' // Include credentials if necessary

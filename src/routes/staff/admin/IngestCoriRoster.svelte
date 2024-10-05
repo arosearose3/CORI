@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import Papa from 'papaparse';
+  import { base } from '$app/paths'; // Import base path
 
   let fileInput;
   let isUploading = false;
@@ -53,7 +54,7 @@
 
     try {
       // Check if practitioner with email exists
-      const existingPractitioner = await fetch(`/avail/api/practitioner/email/${encodeURIComponent(email)}`);
+      const existingPractitioner = await fetch(`${base}/api/practitioner/email/${encodeURIComponent(email)}`);
       let practitioner;
 
       if (existingPractitioner.ok) {
@@ -105,7 +106,7 @@
       ],
     };
 
-    const response = await fetch('/avail/api/practitioner/add', {
+    const response = await fetch(`${base}/api/practitioner/add`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formattedData),
@@ -135,7 +136,7 @@
       ],
     };
 
-    const response = await fetch(`/avail/api/practitioner/${practitionerId}/update`, {
+    const response = await fetch(`${base}/api/practitioner/${practitionerId}/update`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedData),
@@ -154,7 +155,7 @@
       organizationId: knownOrganizationId,
     };
 
-    const response = await fetch('/avail/api/practitioner/associate', {
+    const response = await fetch(`${base}/api/practitioner/associate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(associationData),

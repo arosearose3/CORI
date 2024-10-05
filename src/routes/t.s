@@ -4,16 +4,18 @@
   import { updateAbilities } from '$lib/stores.js';
   
   import {
+    initFhirAuth,
     handleFhirAuth,
-    checkFhirAuthStatus,
-    fhirAuthError,
+    checkAuthStatus as checkFhirAuthStatus,
+    authError as fhirAuthError,
     disconnectFhirAuth,
   } from '$lib/auth/googleFhirAuth.js';
   
   import {
+    initGoogleAuth,
+    handleGoogleAuth,
     logoutGoogleUser,
-    checkUserAuthStatus,
-
+    authError as googleAuthError,
   } from '$lib/auth/googleUserAuth.js';
 
   import { Ability } from '@casl/ability';
@@ -46,7 +48,7 @@
   let currentOrgName = '';
   let localOrgArray = [];
 
-  console.log('Base path +layout:', base,":"); // incorrect until after onMount
+  console.log('Base path +layout:', base,":"); // Debugging log
 
   // Reactive Statement: Determine if the current path is the home page
   $: {
@@ -85,40 +87,29 @@
     ability = value;
   });
 
-// Subscribe to user store
-const unsubscribeUser = user.subscribe(async value => {
-  console.log("+layout user.subscribe, value:", value);
-  userData = value?.user || null;
+  // Subscribe to user store
+  const unsubscribeUser = user.subscribe(async value => {
+    console.log("+layout user.subscribe, value:", value);
+    userData = value?.user || null;
 
-  isUserAuthenticated = !!userData?.id;
+    isUserAuthenticated = !!userData?.id;
 
-  if (isUserAuthenticated && userData?.email && !hasFetchedPractitionerData) {
+    if (isUserAuthenticated && userData?.email && !hasFetchedPractitionerData) {
+      isFetchingPractitioner = true;
+      await fetchPractitionerData(userData.email);
+      hasFetchedPractitionerData = true;
+      isFetchingPractitioner = false;
 
-    console.log("+layout user.subscribe YES authenticated");
-    isFetchingPractitioner = true;
-    await fetchPractitionerData(userData.email);
-    hasFetchedPractitionerData = true;
-    isFetchingPractitioner = false;
-
-    // Initialize FHIR auth only after user is authenticated
-    /* if (!isFhirAuthenticated) {
-      await initializeFhirAuth();
-    } */
-  } 
-  if (!isUserAuthenticated) {
-    console.log("+layout user.subscribe NO not authenticated");
-    console.log("isUserAuth:" + isUserAuthenticated + " email:" + userData?.email + " hasFetched:" + hasFetchedPractitionerData);
-    
-    // Clear user information if not authenticated
-    resetPractitionerData();
-    abilities.set(new Ability([]));
-    isFhirAuthenticated = false;
-
-    // Clear user information from the store
-    user.set(null);
-  }
-});
-
+      // Initialize FHIR auth only after user is authenticated
+      if (!isFhirAuthenticated) {
+        await initializeFhirAuth();
+      }
+    } else if (!isUserAuthenticated) {
+      resetPractitionerData();
+      abilities.set(new Ability([]));
+      isFhirAuthenticated = false;
+    }
+  });
 
   // Subscribe to FHIR authentication error store
   const unsubscribeFhirError = fhirAuthError.subscribe(value => {
@@ -127,10 +118,10 @@ const unsubscribeUser = user.subscribe(async value => {
   });
 
   // Function to initialize FHIR authentication
-  async function initializeFhirAuthold() {
+  async function initializeFhirAuth() {
     try {
-   //   await initFhirAuth(base);
-      isFhirAuthenticated = await checkFhirAuthStatus(base);
+      await initFhirAuth(base);
+      isFhirAuthenticated = await checkFhirAuthStatus();
     } catch (error) {
       console.error('FHIR Initialization error:', error);
       fhirError = 'FHIR Initialization failed. Please try again.';
@@ -147,11 +138,6 @@ const unsubscribeUser = user.subscribe(async value => {
       fetchError = 'Authentication Initialization failed. Please try again.';
       isInitializing = false;
     } */
-  
-    console.log('Base path in layout/onMount:', base); 
-    console.log('Base path in layout/onMount:', base);
-    await checkUserAuthStatus(base); // Call checkAuthStatus to retrieve and set user data
-
   });
 
   // Clean up subscriptions on component destroy
@@ -165,9 +151,8 @@ const unsubscribeUser = user.subscribe(async value => {
   async function handleLogin() {
     console.log('Handling login with base:', base);
     try {
-      const authUrl = `${base}/auth/google/url`;
-      // Redirect to the Express server route that initiates Google OAuth
-      window.location.href = authUrl;
+      await handleGoogleAuth(base);
+      // handleGoogleAuth likely redirects the user, so no further action here
     } catch (error) {
       console.error('Error during login:', error);
       // Optionally set an error state to display to the user
@@ -187,7 +172,6 @@ const unsubscribeUser = user.subscribe(async value => {
         resetPractitionerData();
         abilities.set(new Ability([]));
         isFhirAuthenticated = false;
-
         user.set(null); // Ensure user store is cleared
         goto(`${base}/`); // Redirect to the base path
       } else {
@@ -387,7 +371,11 @@ const unsubscribeUser = user.subscribe(async value => {
     updateAbilities($user.roles);
   }
 
-
+  // Subscribe to Google Auth error to display any authentication errors
+  let currentAuthError;
+  googleAuthError.subscribe(value => {
+    currentAuthError = value;
+  });
 
 </script>
 
@@ -436,9 +424,11 @@ const unsubscribeUser = user.subscribe(async value => {
   </aside>
 
   <main class="main-content">
-
+    {#if currentAuthError}
+      <div class="error-message">{currentAuthError}</div>
+    {/if}
     {#if isInitializing}
-  <!--     <p>Initializing application, please wait...</p> -->
+      <p>Initializing application, please wait...</p>
     {:else if isFetchingPractitioner}
       <p>Loading your data, please wait...</p>
     {:else if fetchError}
@@ -448,8 +438,8 @@ const unsubscribeUser = user.subscribe(async value => {
     <!-- Display role selection UI if multiple PractitionerRoles are available -->
     {#if showRoleSelection && practitionerRoles}
       <div class="role-selection">
-   <!--      <h2>All PractitionerRoles</h2>
-        <pre>{JSON.stringify(practitionerRoles, null, 2)}</pre> -->
+        <h2>All PractitionerRoles</h2>
+        <pre>{JSON.stringify(practitionerRoles, null, 2)}</pre>
 
         <h3>Choose an Organization</h3>
         <ul>

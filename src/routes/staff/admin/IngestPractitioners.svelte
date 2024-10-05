@@ -1,5 +1,7 @@
 <script>
     import { onMount } from 'svelte';
+    import { base } from '$app/paths'; // Import base path
+
     import Papa from 'papaparse';
   
     let fileInput;
@@ -59,7 +61,7 @@
       };
   
       try {
-        const response = await fetch('/avail/api/practitioner/add', {
+        const response = await fetch(`${base}/api/practitioner/add`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

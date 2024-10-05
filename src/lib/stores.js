@@ -132,7 +132,7 @@ export function updateAbilities(userRoles) {
 
       can('view', 'ServiceRequests');
       can('view', 'Consents');
-      can('view', 'User Settings');
+      can('view', 'Client Settings');
       can('view', 'OrganizationSearch');
       can('view', 'Notifications');
       can('view', 'Messages');
@@ -159,16 +159,40 @@ export function setUser(userData) {
   }
 
   user.update(store => {
+    // Initialize the store if it's null or undefined
+    if (!store) {
+      store = {
+        user: {
+          id: null,
+          email: null,
+          name: null,
+          picture: null,
+          roles: [], // Ensure roles array is present
+        },
+        practitioner: {
+          id: null,
+          name: null,
+          organizationId: null,
+          organizationName: null,
+          availability: null,
+          PractitionerRoleId: null,
+          roles: [],
+        },
+      };
+    }
+
+    // Update user information
     store.user = {
       id: userData.id || null,
       email: userData.email || null,
       name: userData.name || null,
       picture: userData.picture || null,
- 
+      roles: userData.roles || [], // Ensure roles are included
     };
-   // console.log("User Store Updated:", store.user);
-    updateAbilities(store.user.roles); // Update abilities based on roles
-    return store;
+
+    // Update abilities based on roles
+    updateAbilities(store.user.roles);
+    return store; // Return the updated store
   });
 }
 

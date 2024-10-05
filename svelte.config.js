@@ -9,7 +9,7 @@ const config = {
     paths: {
       base: '/avail/prod'
     },
-   // trailingSlash: 'always', // Force a trailing slash
+  
     prerender: {
       handleHttpError: 'warn'
     }

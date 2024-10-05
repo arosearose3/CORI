@@ -1,5 +1,6 @@
 <script>
     import { onMount } from 'svelte';
+    import { base } from '$app/paths'; // Import base path
 
     let practitioners = [];
     let patients = [];
@@ -15,7 +16,7 @@
     // Function to fetch practitioners and transform the FHIR response
     async function fetchPractitioners() {
       try {
-        const response = await fetch('/avail/api/practitioner/all');
+        const response = await fetch(`${base}/api/practitioner/all`);
         const data = await response.json();
 
         // Check if the response is a FHIR bundle and has entries
@@ -39,7 +40,7 @@
     // Function to fetch patients and transform the FHIR response
     async function fetchPatients() {
       try {
-        const response = await fetch('/avail/api/patient/all');
+        const response = await fetch(`${base}/api/patient/all`);
         const data = await response.json();
 
         // Check if the response is a FHIR bundle and has entries
@@ -83,7 +84,7 @@
           ],
         }));
         let sendUpdate = updates[0];
-        const response = await fetch('/avail/api/patient/update', {
+        const response = await fetch(`${base}/api/patient/update`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

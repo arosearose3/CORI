@@ -11,6 +11,8 @@ export const FHIR_STORE_ID = '1';
 
 export const healthcare = google.healthcare('v1');
 
+export const BASE_PATH = '/avail/prod'; // Define your base path here
+
 // Initialize GoogleAuth with correct scopes
 export const auth = new GoogleAuth({
   scopes: ['https://www.googleapis.com/auth/cloud-platform'],

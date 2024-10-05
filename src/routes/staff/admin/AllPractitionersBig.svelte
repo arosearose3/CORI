@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { base } from '$app/paths'; // Import base path
 
   let practitioners = [];
   let isLoading = true;
@@ -11,7 +12,7 @@
 
   async function fetchPractitioners() {
     try {
-      const response = await fetch('/avail/api/practitioner/all');
+      const response = await fetch(`${base}/api/practitioner/all`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

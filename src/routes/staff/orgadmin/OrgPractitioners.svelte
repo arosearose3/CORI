@@ -1,6 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import { user } from '$lib/stores.js'; // Assuming organizationId is stored in stores.js
+    import { base } from '$app/paths'; // Import base path
   
     let sortColumn = 'name';
     let sortDirection = 'asc';
@@ -32,7 +33,7 @@
           throw new Error('Organization ID is not available');
         }
   
-        const response = await fetch(`/avail/api/role/withOrganization?organizationId=${organizationId}`);
+        const response = await fetch(`${base}/api/role/withOrganization?organizationId=${organizationId}`);
         const data = await response.json();
   
         // Validate the bundle structure
@@ -79,7 +80,7 @@
      */
     async function fetchPractitionerDetails(practitionerId) {
       try {
-        const response = await fetch(`/avail/api/practitioner/${practitionerId}`);
+        const response = await fetch(`${base}/api/practitioner/${practitionerId}`);
         const data = await response.json();
   
         if (data.resourceType === 'Bundle' && Array.isArray(data.entry) && data.entry.length > 0) {

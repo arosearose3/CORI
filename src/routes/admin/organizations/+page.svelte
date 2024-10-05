@@ -8,6 +8,8 @@
   import PickOrganization from './PickOrganization.svelte';
   import SetUserRoles from './SetUserRoles.svelte';
 
+  import { base } from '$app/paths'; // Import base path
+
 
   let organizations = [];
   let practitionerRoles = [];
@@ -54,7 +56,7 @@
 
     isFetching = true;
     try {
-      const response = await fetch('/avail/api/organization/all', {
+      const response = await fetch(`${base}/api/organization/all`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
