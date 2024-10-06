@@ -2,8 +2,8 @@
    import OrgPractitioners from './OrgPractitioners.svelte';
 </script>
 
-<h4> show all staff from this org</h4>
-<hr>
+<h5>Staff Capacity and Availability</h5>
+
 
 
 <OrgPractitioners />

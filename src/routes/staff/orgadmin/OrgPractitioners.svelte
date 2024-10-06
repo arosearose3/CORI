@@ -166,23 +166,7 @@
       });
     }
   
-    /**
-     * Converts three-letter day codes to full day names.
-     * @param {string} dayCode - The three-letter day code (e.g., 'mon').
-     * @returns {string} - The full name of the day (e.g., 'Monday').
-     */
-    function convertDayCode(dayCode) {
-      const dayMap = {
-        mon: 'Monday',
-        tue: 'Tuesday',
-        wed: 'Wednesday',
-        thu: 'Thursday',
-        fri: 'Friday',
-        sat: 'Saturday',
-        sun: 'Sunday',
-      };
-      return dayMap[dayCode.toLowerCase()] || dayCode;
-    }
+
   
     /**
      * Formats a time string from "HH:MM:SS" to "hAM/PM" format.
@@ -246,11 +230,16 @@
    * @param {string} timeStr - The time string to parse.
    * @returns {number} - Minutes since 7 AM.
    */
-  function parseTimeToMinutes(timeStr) {
+   function parseTimeToMinutes(timeStr) {
     const [hour, minute, second] = timeStr.split(':').map(Number);
     const totalMinutes = (hour * 60 + minute) - 420; // 7 AM is 420 minutes from midnight
     // Ensure the minutes are within 0 to 780 (7 AM to 8 PM)
     return Math.max(0, Math.min(780, totalMinutes));
+  }
+
+  function parseTime(timeStr) {
+    const [hour, minute, second] = timeStr.split(':').map(Number);
+    return { hour, minute };
   }
 
   /**
@@ -258,34 +247,134 @@
    * @param {Array} availableTimes - The practitioner's available times.
    * @returns {Array|null} - An array of segments or null if no availability.
    */
-  function getBarSegments(availableTimes) {
+   function getBarSegments(availableTimes) {
     if (!availableTimes || availableTimes.length === 0) return null;
 
-    let isAllDay = false;
-    let segments = [];
+    let segmentsByDay = [];
 
     availableTimes.forEach(time => {
-      if (time.allDay) {
-        isAllDay = true;
-      } else {
-        const startMinutes = time.availableStartTime ? parseTimeToMinutes(time.availableStartTime) : null;
-        const endMinutes = time.availableEndTime ? parseTimeToMinutes(time.availableEndTime) : null;
-        if (startMinutes !== null && endMinutes !== null) {
-          segments.push({ start: startMinutes, end: endMinutes });
+      const days = time.daysOfWeek || [];
+      days.forEach(day => {
+        const dayName = convertDayCode(day);
+        let segments = [];
+
+        if (time.allDay) {
+          // All day availability from 7 AM to 8 PM
+          segments.push({ start: 0, end: 780 });
+        } else {
+          const startMinutes = time.availableStartTime ? parseTimeToMinutes(time.availableStartTime) : null;
+          const endMinutes = time.availableEndTime ? parseTimeToMinutes(time.availableEndTime) : null;
+          if (startMinutes !== null && endMinutes !== null) {
+            segments.push({ start: startMinutes, end: endMinutes });
+          }
         }
-      }
+
+        // Find existing entry for the day or create a new one
+        let dayEntry = segmentsByDay.find(d => d.day === dayName);
+        if (!dayEntry) {
+          dayEntry = { day: dayName, segments: [] };
+          segmentsByDay.push(dayEntry);
+        }
+        dayEntry.segments = dayEntry.segments.concat(segments);
+      });
     });
 
-    if (isAllDay) {
-      // Return a segment covering the entire day
-      return [{ start: 0, end: 780 }]; // 780 minutes from 7 AM to 8 PM
-    } else if (segments.length > 0) {
-      return segments;
-    } else {
-      return null; // No valid availability segments
-    }
+    // Sort days for consistent display order
+    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    segmentsByDay.sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day));
+
+    return segmentsByDay;
+  }
+ function formatTimeRange(startTime, endTime) {
+    const startPeriod = startTime.hour >= 12 ? 'pm' : 'am';
+    const endPeriod = endTime.hour >= 12 ? 'pm' : 'am';
+
+    let startHour = startTime.hour % 12 || 12;
+    let endHour = endTime.hour % 12 || 12;
+
+    let startMinute = startTime.minute ? `:${startTime.minute.toString().padStart(2, '0')}` : '';
+    let endMinute = endTime.minute ? `:${endTime.minute.toString().padStart(2, '0')}` : '';
+
+    // If minutes are 0, don't display them
+    if (startMinute === ':00') startMinute = '';
+    if (endMinute === ':00') endMinute = '';
+
+    if (startPeriod !== endPeriod) {
+    // Start time and end time are in different periods
+    return `${startHour}${startMinute}${startPeriod}-${endHour}${endMinute}${endPeriod}`;
+  } else {
+    // Same period, only add period at the end
+    return `${startHour}${startMinute}-${endHour}${endMinute}${startPeriod}`;
+  }
   }
 
+  /**
+   * Converts three-letter day codes to short day names.
+   * @param {string} dayCode - The three-letter day code (e.g., 'mon').
+   * @returns {string} - The short name of the day (e.g., 'M' or 'T').
+   */
+  function convertDayCode(dayCode) {
+    const dayMap = {
+      mon: 'M',
+      tue: 'T',
+      wed: 'W',
+      thu: 'Th',
+      fri: 'F',
+      sat: 'Sat',
+      sun: 'Sun',
+    };
+    return dayMap[dayCode.toLowerCase()] || dayCode;
+  }
+
+  /**
+   * Computes the availability information grouped by day.
+   * @param {Array} availableTimes - The practitioner's available times.
+   * @returns {Array|null} - An array of objects containing day, time ranges, and segments.
+   */
+  function getAvailabilityByDay(availableTimes) {
+    if (!availableTimes || availableTimes.length === 0) return null;
+
+    let availabilityByDay = [];
+
+    availableTimes.forEach(time => {
+      const days = time.daysOfWeek || [];
+      days.forEach(day => {
+        const dayLabel = convertDayCode(day);
+
+        // Find existing entry for the day or create a new one
+        let dayEntry = availabilityByDay.find(d => d.day === dayLabel);
+        if (!dayEntry) {
+          dayEntry = { day: dayLabel, timeRanges: [], segments: [] };
+          availabilityByDay.push(dayEntry);
+        }
+
+        if (time.allDay) {
+          dayEntry.timeRanges.push('all day');
+          dayEntry.segments.push({ start: 0, end: 780 });
+        } else {
+          const startTimeObj = parseTime(time.availableStartTime);
+          const endTimeObj = parseTime(time.availableEndTime);
+          const timeRangeStr = formatTimeRange(startTimeObj, endTimeObj);
+
+          dayEntry.timeRanges.push(timeRangeStr);
+
+          const startMinutes = parseTimeToMinutes(time.availableStartTime);
+          const endMinutes = parseTimeToMinutes(time.availableEndTime);
+          dayEntry.segments.push({ start: startMinutes, end: endMinutes });
+        }
+      });
+    });
+
+    // Sort days for consistent display order
+    const dayOrder = ['M', 'T', 'W', 'Th', 'F', 'Sat', 'Sun'];
+    availabilityByDay.sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day));
+
+    return availabilityByDay;
+  }
+
+
+
+  // Existing functions continue...
 
   </script>
   
@@ -328,30 +417,38 @@
     }
 
 
+    .availability-row {
+    font-size: 80%;
+    padding: 2px 0; /* Reduce vertical padding */
+  }
+
+  .day-label {
+    font-weight: normal;
+  }
+
   .availability-bar {
     position: relative;
-    height: 20px;
-    background-color: lightblue; /* Light blue background for the bar */
+    height: 5px; /* Reduced height */
+    background-color: lightblue;
     width: 100%;
-    margin-top: 5px;
     border: 1px solid #ccc;
+    margin-top: 2px;
   }
 
   .availability-segment {
     position: absolute;
     height: 100%;
-    background-color: darkblue; /* Dark blue for available time ranges */
+    background-color: darkblue;
   }
-
   </style>
+  
   <!-- Table UI -->
 {#if practitioners.length > 0}
 <table>
   <thead>
     <tr>
-      <th></th>
+    
       <th on:click={() => sortTable('name')}>Practitioner Name</th>
-      <th on:click={() => sortTable('birthDate')}>Date of Birth</th>
       <th on:click={() => sortTable('kids')}>Kids</th>
       <th on:click={() => sortTable('teens')}>Teens</th>
       <th on:click={() => sortTable('adults')}>Adults</th>
@@ -362,33 +459,40 @@
   <tbody>
     {#each practitioners as practitioner}
       <tr>
-        <td>
+<!--         <td>
           <span class="delete-btn" on:click={() => handleDelete(practitioner.id)}>🗑️</span>
-        </td>
+        </td> -->
         <td>{practitioner.name}</td>
-        <td>{practitioner.birthDate}</td>
         <td>{practitioner.kids}</td>
         <td>{practitioner.teens}</td>
         <td>{practitioner.adults}</td>
         <td>{practitioner.couples}</td>
         <td>{practitioner.families}</td>
       </tr>
-      {#if getBarSegments(practitioner.availableTimes)}
-        <tr>
-          <td colspan="8">
-            <div class="availability-bar">
-              {#each getBarSegments(practitioner.availableTimes) as segment}
-                <div
-                  class="availability-segment"
-                  style="
-                    left: {segment.start / 780 * 100}%;
-                    width: {(segment.end - segment.start) / 780 * 100}%;
-                  "
-                ></div>
-              {/each}
-            </div>
-          </td>
-        </tr>
+      {#if getAvailabilityByDay(practitioner.availableTimes)}
+        {#each getAvailabilityByDay(practitioner.availableTimes) as dayInfo}
+          <tr>
+           
+            <!-- Day label aligned under Practitioner Name column -->
+            <td class="availability-row day-label">
+              {dayInfo.day} {dayInfo.timeRanges.join(', ')}
+            </td>
+            <!-- Availability bar aligned under Kids to Families columns -->
+            <td colspan="5" class="availability-row">
+              <div class="availability-bar">
+                {#each dayInfo.segments as segment}
+                  <div
+                    class="availability-segment"
+                    style="
+                      left: {segment.start / 780 * 100}%;
+                      width: {(segment.end - segment.start) / 780 * 100}%;
+                    "
+                  ></div>
+                {/each}
+              </div>
+            </td>
+          </tr>
+        {/each}
       {/if}
     {/each}
   </tbody>
@@ -396,3 +500,4 @@
 {:else}
 <p class="message">{message || 'No practitioners found.'}</p>
 {/if}
+
