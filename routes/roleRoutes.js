@@ -158,6 +158,14 @@ router.patch('/patchCapacity', async (req, res) => {
     return res.status(400).json({ error: 'practitionerRole.id is required.' });
   }
 
+    // Check if resourceType exists, if not, add it
+    if (!practitionerRole.resourceType) {
+      console.log('ResourceType not found in practitionerRole, adding it.');
+      practitionerRole.resourceType = "PractitionerRole";
+    } else if (practitionerRole.resourceType !== "PractitionerRole") {
+      console.warn(`Unexpected resourceType: ${practitionerRole.resourceType}. Expected: PractitionerRole`);
+    }
+    
   try {
     if (!practitionerRole.extension) {
       practitionerRole.extension = [];

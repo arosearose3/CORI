@@ -1,7 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { user, abilities } from '$lib/stores.js';
-  import { updateAbilities } from '$lib/stores.js';
+  import { user, abilities, hasFetchedPractitionerData, clearUserStore, updateAbilities } from '$lib/stores.js';
   
   import {
     handleFhirAuth,
@@ -13,7 +12,6 @@
   import {
     logoutGoogleUser,
     checkUserAuthStatus,
-
   } from '$lib/auth/googleUserAuth.js';
 
   import { Ability } from '@casl/ability';
@@ -23,7 +21,7 @@
   import HomepageText from './HomepageText.svelte';
   import { afterNavigate } from '$app/navigation';
   import { page } from '$app/stores';
-  import { base } from '$app/paths'; // Import base path
+  import { base } from '$app/paths';
 
   // State Variables
   let isHomePage = false;
@@ -38,7 +36,6 @@
   let selectedPractitionerRole = null; // The selected PractitionerRole object
   let userRoles = []; // Array of role strings defining user abilities
   let organizations = []; // List of organizations extracted from PractitionerRoles
-  let hasFetchedPractitionerData = false;
   let fetchError = null;
   let isInitializing = true;
   let isFetchingPractitioner = false;
@@ -46,9 +43,8 @@
   let currentOrgName = '';
   let localOrgArray = [];
 
-  console.log('Base path +layout:', base,":"); // incorrect until after onMount
+  console.log('Base path +layout:', base, ":");
 
-  // Reactive Statement: Determine if the current path is the home page
   $: {
     isHomePage = $page.url.pathname === `${base}/`;
     console.log('isHomePage changed:', isHomePage);
@@ -56,72 +52,57 @@
   }
 
   $: {
-  console.log('*******userData:', userData);
-  console.log('ability:', ability);
-  console.log('userRoles:', userRoles);
-}
+    console.log('*******LAYOUTuserData:', userData);
+    console.log('ability:', ability);
+    console.log('userRoles:', userRoles);
+  }
 
-$: {
+  $: {
   isUserAuthenticated = !!userData?.id;
-  console.log('isUserAuthenticated updated:', isUserAuthenticated);
+  console.log('+layout/isUserAuthenticated updated:', isUserAuthenticated);
+  
+  if (isUserAuthenticated && userData?.practitioner?.roles) {
+    console.log('+layout/Updating abilities with roles:', userData.practitioner.roles);
+    updateAbilities(userData.practitioner.roles);
+  }
 }
 
-  // Navigation logging
   afterNavigate(() => {
     console.log(`Navigated to: ${$page.url.pathname}`);
   });
 
-  // Reactive Statement: Determine if the user is authenticated based on userData
-  $: isUserAuthenticated = !!userData?.id;
+  // Subscribe to user store
+  const unsubscribeUser = user.subscribe(async value => {
+    console.log("+layout user.subscribe, value:", value);
+    userData = value?.user || null;
+    
+    isUserAuthenticated = !!userData?.id;
 
-  // Function to update roles and abilities
-  function updateRolesAndAbilities(newRoles) {
-    userRoles = newRoles;
-    updateAbilities(newRoles);
-  }
+    if (isUserAuthenticated && value?.practitioner) {
+      practitionerId = value.practitioner.id;
+      practitionerName = value.practitioner.name;
+      userRoles = value.practitioner.roles || [];
+      console.log("+layout: Updated userRoles:", userRoles);
+    }
 
-  // Function to reset practitioner-related data
-  function resetPractitionerData() {
-    practitionerId = null;
-    practitionerName = null;
-    practitionerRoles = [];
-    selectedPractitionerRole = null;
-    userRoles = [];
-    organizations = [];
-    hasFetchedPractitionerData = false;
-  }
+    if (isUserAuthenticated && userData?.email && !hasFetchedPractitionerData()) {
+      console.log("+layout user.subscribe YES authenticated");
+      isFetchingPractitioner = true;
+      await fetchPractitionerData(userData.email);
+      isFetchingPractitioner = false;
+    } 
+    if (!isUserAuthenticated) {
+      console.log("+layout user.subscribe NO not authenticated");
+      resetPractitionerData();
+      abilities.set(new Ability([]));
+      isFhirAuthenticated = false;
+    }
+  });
 
   // Subscribe to abilities store
   const unsubscribeAbilities = abilities.subscribe(value => {
     ability = value;
   });
-
-// Subscribe to user store
-const unsubscribeUser = user.subscribe(async value => {
-  console.log("+layout user.subscribe, value:", value);
-  userData = value?.user || null;
-
-  isUserAuthenticated = !!userData?.id;
-
-  if (isUserAuthenticated && userData?.email && !hasFetchedPractitionerData) {
-    console.log("+layout user.subscribe YES authenticated");
-    isFetchingPractitioner = true;
-    await fetchPractitionerData(userData.email);
-    hasFetchedPractitionerData = true;
-    isFetchingPractitioner = false;
-  } 
-  if (!isUserAuthenticated) {
-    console.log("+layout user.subscribe NO not authenticated");
-    console.log("isUserAuth:" + isUserAuthenticated + " email:" + userData?.email + " hasFetched:" + hasFetchedPractitionerData);
-    
-    // Clear user information if not authenticated
-    resetPractitionerData();
-    abilities.set(new Ability([]));
-    isFhirAuthenticated = false;
-    hasFetchedPractitionerData = false;
-  }
-});
-
 
   // Subscribe to FHIR authentication error store
   const unsubscribeFhirError = fhirAuthError.subscribe(value => {
@@ -129,21 +110,12 @@ const unsubscribeUser = user.subscribe(async value => {
     isFhirAuthenticated = !value;
   });
 
-  // Function to initialize FHIR authentication
-  async function initializeFhirAuthold() {
-    try {
-   //   await initFhirAuth(base);
-      isFhirAuthenticated = await checkFhirAuthStatus(base);
-    } catch (error) {
-      console.error('FHIR Initialization error:', error);
-      fhirError = 'FHIR Initialization failed. Please try again.';
-    }
-  }
-
   // Initialize authentication on component mount
   onMount(async () => {  
     console.log('Base path in layout/onMount:', base);
-    await checkUserAuthStatus(base); // Call checkAuthStatus to retrieve and set user data
+    isInitializing = true;
+    await checkUserAuthStatus(base);
+    isInitializing = false;
   });
 
   // Clean up subscriptions on component destroy
@@ -153,50 +125,48 @@ const unsubscribeUser = user.subscribe(async value => {
     unsubscribeFhirError();
   });
 
+  // Function to reset practitioner-related data
+  function resetPractitionerData() {
+    practitionerId = null;
+    practitionerName = null;
+    practitionerRoles = [];
+    selectedPractitionerRole = null;
+    // Don't reset userRoles here
+    organizations = [];
+    localOrgArray = [];
+    console.log("+layout resetPractitionerData: userRoles preserved:", userRoles);
+  }
+
   // Function to handle user login
   async function handleLogin() {
     console.log('Handling login with base:', base);
     try {
       const authUrl = `${base}/auth/google/url`;
-      // Redirect to the Express server route that initiates Google OAuth
       window.location.href = authUrl;
     } catch (error) {
       console.error('Error during login:', error);
-      // Optionally set an error state to display to the user
     }
   }
 
   // Function to handle user logout
   async function handleLogout() {
-  console.log('handleLogout called with base:', base);
-  try {
-    const result = await logoutGoogleUser(base);
-    if (result && result.success) {
-      // Clear user data
-      user.set({ user: null, practitioner: null });
-      
-      // Reset authentication states
-      isUserAuthenticated = false;
-      isFhirAuthenticated = false;
-
-      // Reset other states
-      resetPractitionerData();
-      abilities.set(new Ability([]));
-
-      // Force a re-render by updating a reactive variable
-      userData = null;
-
-      // Redirect to the base path
-      goto(`${base}/`);
-    } else {
-      console.error('Logout failed:', result.error);
-      // Optionally set an error state to display to the user
+    console.log('handleLogout called with base:', base);
+    try {
+      const result = await logoutGoogleUser(base);
+      if (result && result.success) {
+        clearUserStore();
+        resetPractitionerData();
+        userRoles = []; // Clear userRoles on logout
+        isUserAuthenticated = false;
+        isFhirAuthenticated = false;
+        goto(`${base}/`);
+      } else {
+        console.error('Logout failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
     }
-  } catch (error) {
-    console.error('Error during logout:', error);
-    // Optionally set an error state to display to the user
   }
-}
 
   // Function to handle connecting to FHIR
   async function handleConnectFhir() {
@@ -207,7 +177,7 @@ const unsubscribeUser = user.subscribe(async value => {
   async function handleDisconnectFhir() {
     await disconnectFhirAuth(base);
     resetPractitionerData();
-    abilities.set(new Ability([]));
+    clearUserStore();
     goto(`${base}/`);
   }
 
@@ -249,13 +219,18 @@ const unsubscribeUser = user.subscribe(async value => {
 
   // Function to fetch practitioner data by email
   async function fetchPractitionerData(email) {
+    if (hasFetchedPractitionerData()) {
+      console.log("Practitioner data already fetched, skipping fetch");
+      return;
+    }
+
     try {
       const response = await fetch(`${base}/api/practitioner/findWithEmail?email=${encodeURIComponent(email)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Include credentials to send cookies
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -265,10 +240,21 @@ const unsubscribeUser = user.subscribe(async value => {
           practitionerId = data[0]?.id || null;
           practitionerName = getFullName(data[0]?.name) || 'Unknown Practitioner';
 
+          user.update(store => ({
+            ...store,
+            practitioner: {
+              ...store.practitioner,
+              id: practitionerId,
+              name: practitionerName,
+              roles: userRoles
+            }
+          }));
+
+          updateAbilities(userRoles);
+          
           console.log("+layout/fetchPractDataEmail prID:" + practitionerId);
           console.log("+layout/fetchPractDataEmail name:" + practitionerName);
 
-          // Fetch associated PractitionerRoles
           await fetchPractitionerRoles(practitionerId);
         } else {
           console.error('No practitioner data found for the provided email.');
@@ -291,44 +277,82 @@ const unsubscribeUser = user.subscribe(async value => {
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Include credentials to send cookies
+        credentials: 'include',
       });
 
       if (response.ok) {
         const bundle = await response.json();
         const entries = Array.isArray(bundle.entry) ? bundle.entry : [];
 
-        // Extract PractitionerRole objects
         practitionerRoles = entries
           .map(entry => entry.resource)
-          .filter(resource => resource.resourceType === 'PractitionerRole');
+          .filter(resource => resource.resourceType === 'PractitionerRole')
+          .filter(role => {
+            const hasValidCode = role.code && Array.isArray(role.code) && role.code.some(c => 
+              c.coding && Array.isArray(c.coding) && c.coding.some(coding => 
+                coding.system === 'https://combinebh.org/cori-value-set/' && coding.code
+              )
+            );
+            if (!hasValidCode) {
+              console.log(`Filtered out PractitionerRole without valid code:`, role);
+            }
+            return hasValidCode;
+          });
 
-          const uniqueOrgRefs = new Set();
-          localOrgArray = [];  // Reset the array
+        console.log(`Filtered practitionerRoles:`, practitionerRoles);
 
-          for (const role of practitionerRoles) {
-            if (role.organization && role.organization.reference) {
-              const orgRef = role.organization.reference;
-              if (!uniqueOrgRefs.has(orgRef)) {
-                uniqueOrgRefs.add(orgRef);
-                let orgName = await getOrganizationName(orgRef);
-                localOrgArray.push({ name: orgName, id: orgRef });
-              }
+        const uniqueOrgRefs = new Set();
+        localOrgArray = [];
+
+        for (const role of practitionerRoles) {
+          if (role.organization && role.organization.reference) {
+            const orgRef = role.organization.reference;
+            if (!uniqueOrgRefs.has(orgRef)) {
+              uniqueOrgRefs.add(orgRef);
+              let orgName = await getOrganizationName(orgRef);
+              localOrgArray.push({ name: orgName, id: orgRef });
             }
           }
+        }
+
+        if (practitionerRoles.length > 0) {
+          // Update userRoles based on the first PractitionerRole
+          const firstRole = practitionerRoles[0];
+          userRoles = (firstRole.code || [])
+            .flatMap(c =>
+              (c.coding || [])
+                .filter(code => code.system === 'https://combinebh.org/cori-value-set/')
+                .map(code => code.code)
+            )
+            .filter(code => code);
+          
+          console.log("+layout fetchPractitionerRoles: Updated userRoles:", userRoles);
+
+          // Update the user store
+          user.update(store => ({
+            ...store,
+            practitioner: {
+              ...store.practitioner,
+              practitionerRoles,
+              localOrgArray,
+              roles: userRoles
+            }
+          }));
+
+          updateAbilities(userRoles);
+        }
+
         console.log("+layout/fetchPR localOrgArray:" + JSON.stringify(localOrgArray));
         console.log("+layout/fetchPR pract[0]:" + JSON.stringify(practitionerRoles[0]));
 
-        // Show role selection if multiple roles
         if (practitionerRoles.length > 1) {
           showRoleSelection = true;
         } else if (practitionerRoles.length === 1) {
           console.log("+layout/fetchPR only one Pract");
-          // Automatically select the role
           selectPractitionerRole(localOrgArray[0].id, localOrgArray[0].name);
         } else {
-          console.error('No PractitionerRole resources found.');
-          fetchError = 'No roles found for the practitioner.';
+          console.error('No valid PractitionerRole resources found.');
+          fetchError = 'No valid roles found for the practitioner.';
         }
       } else {
         throw new Error('Failed to fetch practitioner roles');
@@ -345,12 +369,10 @@ const unsubscribeUser = user.subscribe(async value => {
     console.log("+layout/selectPR prId:" + JSON.stringify(prId));
     console.log("+layout/selectPR practitionerRoles:" + JSON.stringify(practitionerRoles));
 
-    // Find the PractitionerRole resource
-    const pr = practitionerRoles.find(role => role.organization.reference === prId);
-    console.log("+layout/selectPR pr:" + JSON.stringify(pr));
+    selectedPractitionerRole = practitionerRoles.find(role => role.organization.reference === prId);
+    console.log("+layout/selectPR selectedPractitionerRole:" + JSON.stringify(selectedPractitionerRole));
 
-    // Extract role codes
-    userRoles = (pr.code || [])
+    userRoles = (selectedPractitionerRole.code || [])
       .flatMap(c =>
         (c.coding || [])
           .filter(code => code.system === 'https://combinebh.org/cori-value-set/')
@@ -358,61 +380,23 @@ const unsubscribeUser = user.subscribe(async value => {
       )
       .filter(code => code);
 
-    selectedPractitionerRole = pr;
-    updatePractitionerStore(pr);
+    console.log("+layout selectPractitionerRole: Updated userRoles:", userRoles);
 
-    // Update abilities
-    updateAbilities(userRoles);
-
-    // Hide the role selection UI
-    showRoleSelection = false;
-  }
-
-/*   // Function to update the practitioner store with selected role
-  function updatePractitionerStore(pr) {
-    user.update(store => {
-      const updatedStore = { ...store };
-      updatedStore.practitioner = {
-        id: pr.practitioner?.reference?.split('/')[1] || null,
-        name: practitionerName || null,
-        organizationId: pr.organization?.reference?.split('/')[1] || null,
-        organizationName: pr.organization?.name || 'Organization',
-        availability: pr.availability || null,
-        PractitionerRoleId: pr.id || null,
-        roles: userRoles
-      };
-      return updatedStore;
-    });
-  } */
-
-  function updatePractitionerStore(pr) {
-  user.update(store => {
-    console.log("Previous store state:", store);
-    const updatedStore = {
+    user.update(store => ({
       ...store,
       practitioner: {
         ...store.practitioner,
-        id: pr.practitioner?.reference?.split('/')[1] || store.practitioner?.id,
-        name: practitionerName || store.practitioner?.name,
-        organizationId: pr.organization?.reference?.split('/')[1] || store.practitioner?.organizationId,
-        organizationName: pr.organization?.name || store.practitioner?.organizationName,
-        availability: pr.availability || store.practitioner?.availability,
-        PractitionerRoleId: pr.id || store.practitioner?.PractitionerRoleId,
-        roles: userRoles.length > 0 ? userRoles : store.practitioner?.roles || []
+        organizationId: selectedPractitionerRole.organization?.reference?.split('/')[1],
+        organizationName: selectedPractitionerRole.organization?.name || 'Organization',
+        availability: selectedPractitionerRole.availability,
+        PractitionerRoleId: selectedPractitionerRole.id,
+        roles: userRoles
       }
-    };
-    console.log("Updated store state:", updatedStore);
-    return updatedStore;
-  });
-}
+    }));
 
-  // Reactive statement to update abilities based on user roles
-  $: if ($user) {
-    updateAbilities($user.roles);
+    updateAbilities(userRoles);
+    showRoleSelection = false;
   }
-
-
-
 </script>
 
 <div class="app-container">

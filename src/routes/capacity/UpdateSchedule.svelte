@@ -1,97 +1,103 @@
 <script>
   import { onMount } from 'svelte';
-  import { user } from '$lib/stores.js';
+  import { user, hasFetchedPractitionerData, updateAbilities } from '$lib/stores.js';
+
   import Pick4 from './Pick4.svelte';
   import Availability from './Availability.svelte';
-  import { base } from '$app/paths'; // Import base path
+  import { base } from '$app/paths';
 
   // Component state variables
-
   let capacityData = null;
   let availabilityData = null;
   let practitionerName = '';
   let updateMessage = '';
   let errorMessage = '';
-  let practitionerRole = null; //this will be a JSON object with the PR
-
+  let practitionerRole = null;
   let isDataReady = false;
+  let currentRoles = [];
 
-  export let currentPractitionerRoleId; // ID passed in from the parent component
+  export let currentPractitionerRoleId;
 
-  // Fetch PractitionerRole details from the server when component mounts or ID changes
-  $: if (currentPractitionerRoleId) {
+  // Fetch PractitionerRole details when component mounts or ID changes
+  $: if (currentPractitionerRoleId && !isDataReady) {
+    console.log('Fetching PractitionerRole data for ID:', currentPractitionerRoleId);
     fetchPractitionerRole(currentPractitionerRoleId);
   }
 
-  // Fetch PractitionerRole details from the server
+  // React to changes in the user store
+  $: if ($user.practitioner && isDataReady) {
+    practitionerName = $user.practitioner.name || 'Unknown Practitioner';
+    currentRoles = $user.practitioner.roles || [];
+    console.log('Practitioner data ready. Name:', practitionerName, 'Roles:', currentRoles);
+  }
+
+  onMount(() => {
+    console.log('Component mounted. Initial roles:', $user.practitioner?.roles);
+  });
+
   async function fetchPractitionerRole(practitionerRoleId) {
+    console.log('Fetching PractitionerRole, ID:', practitionerRoleId);
+    
     try {
-      console.log ("in fetch 1 PRid:"+practitionerRoleId);
-
-
       const response = await fetch(`${base}/api/role/getOne?id=${practitionerRoleId}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      console.log ("in fetch 2 data:"+JSON.stringify(data));
+      console.log('Fetched PractitionerRole data:', data);
 
-      if (data.resourceType === 'PractitionerRole') {
-        practitionerRole = data; // Extract the PractitionerRole resource
-          const roleInfo = {
-            id: practitionerRole.id,
-            practitionerId: practitionerRole.practitioner?.reference.split('/')[1],
-            organizationId: practitionerRole.organization?.reference.split('/')[1],
-            availableTime: practitionerRole.availableTime || [],
-            capacity: practitionerRole.extension?.find(
-              (ext) =>
-                ext.url ===
-                'https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html'
-            )?.extension || [],
+      if (data.resourceType === 'PractitionerRole' || (data.resourceType === 'Bundle' && data.entry && data.entry.length > 0)) {
+        practitionerRole = data.resourceType === 'PractitionerRole' ? data : data.entry[0].resource;
+        
+        capacityData = practitionerRole.extension?.find(
+          (ext) => ext.url === 'https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html'
+        )?.extension || [];
+        
+        availabilityData = practitionerRole.availableTime || [];
+        
+        // Ensure roles are preserved
+        const roles = (practitionerRole.code || [])
+          .flatMap(c => c.coding || [])
+          .filter(coding => coding.system === 'https://combinebh.org/cori-value-set/')
+          .map(coding => coding.code)
+          .filter(Boolean);
+
+        console.log('Roles extracted from PractitionerRole:', roles);
+
+        // Update the user store with the fetched data
+        user.update(store => {
+          const updatedStore = {
+            ...store,
+            practitioner: {
+              ...store.practitioner,
+              PractitionerRoleId: practitionerRole.id,
+              capacity: capacityData,
+              availability: availabilityData,
+              roles: store.practitioner.roles // Explicitly preserve roles
+            }
           };
 
-          console.log("Direct PractitionerRole retrieved:", JSON.stringify(roleInfo));
-      capacityData = roleInfo.capacity;
-      availabilityData = roleInfo.availableTime;
-      console.log ("updatesched/fetchPr/ifPR availabilityData:"+JSON.stringify(availabilityData));
-      practitionerName = $user.practitioner.name || 'Unknown Practitioner';
-      isDataReady = true; // Mark data as ready
+          // Only update roles if we have new roles and they're different from the current roles
+          if (roles.length > 0 && JSON.stringify(roles) !== JSON.stringify(store.practitioner.roles)) {
+            updatedStore.practitioner.roles = roles;
+            console.log('Updating roles in store:', roles);
+          } else {
+            console.log('Keeping existing roles:', store.practitioner.roles);
+          }
+          
+          updateAbilities(updatedStore.practitioner.roles);
+  
+          return updatedStore;
+        });
 
-    }
-      // Check if the response is a Bundle and extract the PractitionerRole resource
-      else if (data.resourceType === 'Bundle' && data.entry && data.entry.length > 0) {
-        const entry = data.entry[0]; // Get the first entry
-        if (entry.resource && entry.resource.resourceType === 'PractitionerRole') {
-          practitionerRole = entry.resource; // Extract the PractitionerRole resource
-          let roleInfo = {
-            id: practitionerRole.id,
-            practitionerId: practitionerRole.practitioner?.reference.split('/')[1],
-            organizationId: practitionerRole.organization?.reference.split('/')[1],
-            availableTime: practitionerRole.availableTime || [],
-            capacity: practitionerRole.extension?.find(
-              (ext) =>
-                ext.url ===
-                'https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html'
-            )?.extension || [],
-          };
-
-          console.log("Bundle PractitionerRole retrieved:", JSON.stringify(roleInfo));
-        capacityData = roleInfo.capacity;
-        availabilityData = roleInfo.availableTime;
-        console.log ("updatesched/fetchPr/Bundle availabilityData:"+JSON.stringify(availabilityData));
-        practitionerName = $user.practitioner.name || 'Unknown Practitioner';
-        isDataReady = true; // Mark data as ready
-
-      }else {
-          errorMessage = 'Failed to retrieve PractitionerRole resource from the Bundle.';
-        }
+        isDataReady = true;
       } else {
-        errorMessage = 'Failed to retrieve PractitionerRole. No matching entries found.';
+        throw new Error('Invalid PractitionerRole data structure');
       }
     } catch (error) {
       console.error('Error fetching PractitionerRole:', error);
-      errorMessage = 'Error fetching PractitionerRole.';
+      errorMessage = `Error fetching PractitionerRole: ${error.message}`;
     }
   }
 
-  // Handle form submission to update role
   async function handleSubmit() {
     if (!practitionerRole) {
       errorMessage = 'No PractitionerRole data available.';
@@ -99,6 +105,11 @@
     }
 
     try {
+      // Ensure practitionerRole has the correct structure
+      if (!practitionerRole.resourceType) {
+        practitionerRole.resourceType = 'PractitionerRole';
+      }
+
       let capacity = null;
       if (capacityData && capacityData.length > 0) {
         capacity = {
@@ -121,74 +132,93 @@
       const data = await response.json();
       updateMessage = 'Successfully updated capacity';
       console.log('Successfully updated capacity:', data);
+
+      // Update the user store with the new capacity data, preserving roles
+      user.update(store => ({
+        ...store,
+        practitioner: {
+          ...store.practitioner,
+          capacity: capacityData,
+          roles: store.practitioner.roles // Explicitly preserve roles
+        }
+      }));
+
+      console.log('Roles after capacity update:', $user.practitioner.roles);
+
     } catch (error) {
-      console.error('Error updating capacity:', error.message);
-      errorMessage = 'Error updating capacity.';
+      console.error('Error updating capacity:', error);
+      errorMessage = `Error updating capacity: ${error.message}`;
     }
 
-    //now patch Availability
-     // Handle patching availability
-     try{
-     if (availabilityData && availabilityData.length > 0) {
-      const availabilityResponse = await fetch(`${base}/api/role/patchAvailability`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          practitionerRole,
-          availableTime: availabilityData,
-        }),
-      });
+    // Handle patching availability
+    if (availabilityData && availabilityData.length > 0) {
+      try {
+        const availabilityResponse = await fetch(`${base}/api/role/patchAvailability`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            practitionerRole,
+            availableTime: availabilityData,
+          }),
+        });
 
-      if (!availabilityResponse.ok) throw new Error('Failed to update the availability.');
+        if (!availabilityResponse.ok) throw new Error('Failed to update the availability.');
 
-      const availabilityDataResponse = await availabilityResponse.json();
-      updateMessage += ' and availability'; // Update message for both patches
-      console.log('Successfully updated availability:', availabilityDataResponse);
+        const availabilityDataResponse = await availabilityResponse.json();
+        updateMessage += ' and availability';
+        console.log('Successfully updated availability:', availabilityDataResponse);
+
+        // Update the user store with the new availability data, preserving roles
+        user.update(store => ({
+          ...store,
+          practitioner: {
+            ...store.practitioner,
+            availability: availabilityData,
+            roles: store.practitioner.roles // Explicitly preserve roles
+          }
+        }));
+
+        console.log('Roles after availability update:', $user.practitioner.roles);
+
+      } catch (error) {
+        console.error('Error updating availability:', error);
+        errorMessage = `Error updating availability: ${error.message}`;
+      }
     } else {
       console.log('No availability data to update.');
     }
-  } catch (error) {
-    console.error('Error updating capacity or availability:', error.message);
-    errorMessage = 'Error updating capacity or availability.';
   }
-}
 
-  // Handle capacity change from Pick4 component
   function handleCapacityChange(event) {
     const { capacityExtension } = event.detail;
-      capacityData = capacityExtension[0].extension;
-    
+    capacityData = capacityExtension[0].extension;
   }
 
-  // Handle availability update from Availability component
   function handleAvailabilityUpdate(event) {
-    const newAvailability = event.detail;
-      availabilityData = newAvailability;
+    availabilityData = event.detail;
   }
 </script>
 
 <div>
-  <h3>Capacity and Availability</h3>
- 
-    <button on:click={handleSubmit}>Submit</button>
-    {#if updateMessage}
-      <p>{updateMessage}</p>
-    {/if}
+  <h3>Capacity and Availability for {practitionerName}</h3>
+  <p>Current Roles: {currentRoles.join(', ')}</p>
+  
+  <button on:click={handleSubmit}>Submit</button>
+  {#if updateMessage}
+    <p>{updateMessage}</p>
+  {/if}
 
-  <!-- Render Availability regardless of whether data is ready or currentPractitionerRoleId is null -->
-  {#if isDataReady || currentPractitionerRoleId === null}
+  {#if isDataReady}
     <Pick4 on:capacitychange={handleCapacityChange} capacity={capacityData} />
     <br><hr /><br>
     <Availability initialAvailability={availabilityData} on:availabilityUpdate={handleAvailabilityUpdate} />
   {:else}
-    <p>Loading...</p> <!-- Optional loading message -->
+    <p>Loading...</p>
   {/if}
 
   {#if errorMessage}
-  <p>{errorMessage}</p>
-{/if}
-    <!-- <h3>{errorMessage}</h3> -->
-  
+    <p class="error">{errorMessage}</p>
+  {/if}
 </div>
 
 <style>

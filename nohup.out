@@ -1,0 +1,481 @@
+Server is running at http://localhost:3000
+Base path +layout: . :
++layout user.subscribe, value: {
+  user: { id: null, email: null, name: null, picture: null },
+  practitioner: {
+    id: null,
+    name: null,
+    organizationId: null,
+    organizationName: null,
+    availability: null,
+    PractitionerRoleId: null,
+    sms: null,
+    dob: null,
+    npi: null,
+    roles: [],
+    practitionerRoles: [],
+    localOrgArray: []
+  }
+}
++layout user.subscribe NO not authenticated
++layout resetPractitionerData: userRoles preserved: []
+isHomePage changed: false
+isHomePage url: /avail/prod/
+*******LAYOUTuserData: { id: null, email: null, name: null, picture: null }
+ability: Ability {
+  h: false,
+  l: Map(0) {},
+  p: {
+    conditionsMatcher: [Function (anonymous)],
+    fieldMatcher: [Function: at],
+    resolveAction: [Function: I]
+  },
+  '$': 'manage',
+  A: 'all',
+  m: [],
+  M: false,
+  j: [Function: z]
+}
+userRoles: []
++layout/isUserAuthenticated updated: false
+Base path +layout: . :
++layout user.subscribe, value: {
+  user: { id: null, email: null, name: null, picture: null },
+  practitioner: {
+    id: null,
+    name: null,
+    organizationId: null,
+    organizationName: null,
+    availability: null,
+    PractitionerRoleId: null,
+    sms: null,
+    dob: null,
+    npi: null,
+    roles: [],
+    practitionerRoles: [],
+    localOrgArray: []
+  }
+}
++layout user.subscribe NO not authenticated
++layout resetPractitionerData: userRoles preserved: []
+isHomePage changed: false
+isHomePage url: /avail/prod/
+*******LAYOUTuserData: { id: null, email: null, name: null, picture: null }
+ability: Ability {
+  h: false,
+  l: Map(0) {},
+  p: {
+    conditionsMatcher: [Function (anonymous)],
+    fieldMatcher: [Function: at],
+    resolveAction: [Function: I]
+  },
+  '$': 'manage',
+  A: 'all',
+  m: [],
+  M: false,
+  j: [Function: z]
+}
+userRoles: []
++layout/isUserAuthenticated updated: false
+Generated Google Auth URL: https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&redirect_uri=https%3A%2F%2Felig.pro%2Favail%2Fprod%2Fauth%2Fgoogle%2Fcallback&response_type=code&client_id=979192353775-aicqcv6icr9p592dgq717agd98jb51jr.apps.googleusercontent.com
+redirect URi: https://elig.pro/avail/prod/auth/google/callback
+User authenticated: {
+  id: '110122485635392158236',
+  email: 'sarahroselpc@boulderemotionalwellness.org',
+  name: 'Sarah Rose',
+  picture: 'https://lh3.googleusercontent.com/a/ACg8ocKIPPLRV3qwEtXzGKOiAPZOLqfVstvpYGdVtnrnD1aPaAywwQ=s96-c'
+}
+redirect to :https://elig.pro/avail/prod
+Base path +layout: . :
++layout user.subscribe, value: {
+  user: { id: null, email: null, name: null, picture: null },
+  practitioner: {
+    id: null,
+    name: null,
+    organizationId: null,
+    organizationName: null,
+    availability: null,
+    PractitionerRoleId: null,
+    sms: null,
+    dob: null,
+    npi: null,
+    roles: [],
+    practitionerRoles: [],
+    localOrgArray: []
+  }
+}
++layout user.subscribe NO not authenticated
++layout resetPractitionerData: userRoles preserved: []
+isHomePage changed: false
+isHomePage url: /avail/prod/
+*******LAYOUTuserData: { id: null, email: null, name: null, picture: null }
+ability: Ability {
+  h: false,
+  l: Map(0) {},
+  p: {
+    conditionsMatcher: [Function (anonymous)],
+    fieldMatcher: [Function: at],
+    resolveAction: [Function: I]
+  },
+  '$': 'manage',
+  A: 'all',
+  m: [],
+  M: false,
+  j: [Function: z]
+}
+userRoles: []
++layout/isUserAuthenticated updated: false
+cap patch/update search:https://healthcare.googleapis.com/v1/projects/combine-fhir-smart-store/locations/us-central1/datasets/COMBINE-FHIR-v1/fhirStores/1/fhir/PractitionerRole/e088051d-93b7-49bc-b9ce-0c60c586b9c9
+****cap patch /update obj:{"active":true,"code":[{"coding":[{"code":"provider","system":"https://combinebh.org/cori-value-set/"}]}],"extension":[{"url":"https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html","extension":[{"url":"adults","valueInteger":0},{"url":"couples","valueInteger":2},{"url":"teens","valueInteger":0},{"url":"children","valueInteger":0},{"url":"families","valueInteger":0}]}],"id":"e088051d-93b7-49bc-b9ce-0c60c586b9c9","meta":{"lastUpdated":"2024-09-29T22:59:18.507388+00:00","versionId":"MTcyNzY1MDc1ODUwNzM4ODAwMA"},"organization":{"reference":"Organization/2076c589-761a-402e-8d63-48e2cb2d1a3c"},"practitioner":{"reference":"Practitioner/851fa71b-de25-4bc0-a9b4-fa158bacb0ee"},"resourceType":"PractitionerRole"}
+patchAvailability 1
+patchAvailability 2
+patchAvailability 3
+patchAvailability PR:{"active":true,"code":[{"coding":[{"code":"provider","system":"https://combinebh.org/cori-value-set/"}]}],"extension":[{"extension":[{"url":"adults","valueInteger":0},{"url":"couples","valueInteger":2},{"url":"teens","valueInteger":0},{"url":"children","valueInteger":0},{"url":"families","valueInteger":0}],"url":"https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html"}],"id":"e088051d-93b7-49bc-b9ce-0c60c586b9c9","meta":{"lastUpdated":"2024-09-29T22:59:18.507388+00:00","versionId":"MTcyNzY1MDc1ODUwNzM4ODAwMA"},"organization":{"reference":"Organization/2076c589-761a-402e-8d63-48e2cb2d1a3c"},"practitioner":{"reference":"Practitioner/851fa71b-de25-4bc0-a9b4-fa158bacb0ee"},"resourceType":"PractitionerRole"}
+patchAvailability availableTime:[{"daysOfWeek":["wed"],"allDay":true,"availableStartTime":"08:00:00","availableEndTime":"17:00:00"},{"daysOfWeek":["thu"],"allDay":true,"availableStartTime":"08:00:00","availableEndTime":"17:00:00"}]
+patchAvailability 4
+patchAvailability 5
+Base path +layout: . :
++layout user.subscribe, value: {
+  user: { id: null, email: null, name: null, picture: null },
+  practitioner: {
+    id: null,
+    name: null,
+    organizationId: null,
+    organizationName: null,
+    availability: null,
+    PractitionerRoleId: null,
+    sms: null,
+    dob: null,
+    npi: null,
+    roles: [],
+    practitionerRoles: [],
+    localOrgArray: []
+  }
+}
++layout user.subscribe NO not authenticated
++layout resetPractitionerData: userRoles preserved: []
+isHomePage changed: false
+isHomePage url: /avail/prod/capacity
+*******LAYOUTuserData: { id: null, email: null, name: null, picture: null }
+ability: Ability {
+  h: false,
+  l: Map(0) {},
+  p: {
+    conditionsMatcher: [Function (anonymous)],
+    fieldMatcher: [Function: at],
+    resolveAction: [Function: I]
+  },
+  '$': 'manage',
+  A: 'all',
+  m: [],
+  M: false,
+  j: [Function: z]
+}
+userRoles: []
++layout/isUserAuthenticated updated: false
+Base path +layout: . :
++layout user.subscribe, value: {
+  user: { id: null, email: null, name: null, picture: null },
+  practitioner: {
+    id: null,
+    name: null,
+    organizationId: null,
+    organizationName: null,
+    availability: null,
+    PractitionerRoleId: null,
+    sms: null,
+    dob: null,
+    npi: null,
+    roles: [],
+    practitionerRoles: [],
+    localOrgArray: []
+  }
+}
++layout user.subscribe NO not authenticated
++layout resetPractitionerData: userRoles preserved: []
+isHomePage changed: false
+isHomePage url: /avail/prod/
+*******LAYOUTuserData: { id: null, email: null, name: null, picture: null }
+ability: Ability {
+  h: false,
+  l: Map(0) {},
+  p: {
+    conditionsMatcher: [Function (anonymous)],
+    fieldMatcher: [Function: at],
+    resolveAction: [Function: I]
+  },
+  '$': 'manage',
+  A: 'all',
+  m: [],
+  M: false,
+  j: [Function: z]
+}
+userRoles: []
++layout/isUserAuthenticated updated: false
+Base path +layout: . :
++layout user.subscribe, value: {
+  user: { id: null, email: null, name: null, picture: null },
+  practitioner: {
+    id: null,
+    name: null,
+    organizationId: null,
+    organizationName: null,
+    availability: null,
+    PractitionerRoleId: null,
+    sms: null,
+    dob: null,
+    npi: null,
+    roles: [],
+    practitionerRoles: [],
+    localOrgArray: []
+  }
+}
++layout user.subscribe NO not authenticated
++layout resetPractitionerData: userRoles preserved: []
+isHomePage changed: false
+isHomePage url: /avail/prod/
+*******LAYOUTuserData: { id: null, email: null, name: null, picture: null }
+ability: Ability {
+  h: false,
+  l: Map(0) {},
+  p: {
+    conditionsMatcher: [Function (anonymous)],
+    fieldMatcher: [Function: at],
+    resolveAction: [Function: I]
+  },
+  '$': 'manage',
+  A: 'all',
+  m: [],
+  M: false,
+  j: [Function: z]
+}
+userRoles: []
++layout/isUserAuthenticated updated: false
+Generated Google Auth URL: https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&redirect_uri=https%3A%2F%2Felig.pro%2Favail%2Fprod%2Fauth%2Fgoogle%2Fcallback&response_type=code&client_id=979192353775-aicqcv6icr9p592dgq717agd98jb51jr.apps.googleusercontent.com
+redirect URi: https://elig.pro/avail/prod/auth/google/callback
+User authenticated: {
+  id: '115150496909375024737',
+  email: 'andrewroselpc@boulderemotionalwellness.org',
+  name: 'Andrew Rose',
+  picture: 'https://lh3.googleusercontent.com/a-/ALV-UjUHRugFG0RKGKZByF0GEp8GTTCJuLz1vnkTw_rRDkiyYPW5ljQqSvpZAceMf87XeHZEC_YO9jr50y06TcGtOeaTb4-i7w82eFCBoX0y5m6ULQankVdKY9bemSciboN5jyTPxeHEAIczhnoG0jZdiv7I0No2lNWo69uinXl_J2ciGIBhOPXH9xulTZHI4g07N-GXOVXYA8PwInizvHDUOtw01foGo45wj8Iprppshj9u4h9lrNqEo5lCiOUmhRkdiLYKDvp49yhkFQh8GQD2FDdi3omTP-K3c5wnugJzE6NTFxkIhLP1EQRZ7NpqTuyTF3Dm5qPh-MiIDlv_4m2dXclUuLrAaPl-wqMvIzK5qcTIu2m4EKYtYJgF38ycDqUYsyGfdciDIaOjvs3boWoFB9yLai0UpebTwhXsNLwulnV6YxbcotJwuACQUcGvZxB5uFld4AXul0_mi-ZijHV3i_jEUT4Jwn66z6WHHFIxpD9m_k8TSUCC_C0UdKnijGdsRSeKIKFnNhHyPYHJXJKjj0H_FGafQHUAwqismFH5dw5DZ7iPgXumGwyNPjSnNMvXv4csV91bUVhmkYg_XGhPGUxifS-cdJXxpkfYvr9_vRv4nO6x2nle030WglN2oQ2Kv28Ac1uYwTXoF70p7u3tdDjt-FfS_H3Z_H51iXBTzV7cWyypsHlqbxyh84uXepy959D_eszayKyGXkRwBsvyDTJVB1vgWtkQVa36mxZTcOBiOZ81FK7i0bA2maxBVXW2IF0ohkO-ldmL3yIz23y16DY-aZv8HCmtmLpmqiBfpMUDysJ0VQtSJaQJ5KQcPREBPTDzri5-s8MriZb0DhVUZy611bF2dg77ExwMdNNY5EPsQWYcNNNJmPvXERQO2xOKoIGHvoGFm3cbeMNs4IJk_4O_I7al6biRw-XPtRl2q5dxC_kndzS2IpiwsGH9Iub8aiz2PfdCZlZjSV95G1zy4XMvIk7m=s96-c'
+}
+redirect to :https://elig.pro/avail/prod
+Base path +layout: . :
++layout user.subscribe, value: {
+  user: { id: null, email: null, name: null, picture: null },
+  practitioner: {
+    id: null,
+    name: null,
+    organizationId: null,
+    organizationName: null,
+    availability: null,
+    PractitionerRoleId: null,
+    sms: null,
+    dob: null,
+    npi: null,
+    roles: [],
+    practitionerRoles: [],
+    localOrgArray: []
+  }
+}
++layout user.subscribe NO not authenticated
++layout resetPractitionerData: userRoles preserved: []
+isHomePage changed: false
+isHomePage url: /avail/prod/
+*******LAYOUTuserData: { id: null, email: null, name: null, picture: null }
+ability: Ability {
+  h: false,
+  l: Map(0) {},
+  p: {
+    conditionsMatcher: [Function (anonymous)],
+    fieldMatcher: [Function: at],
+    resolveAction: [Function: I]
+  },
+  '$': 'manage',
+  A: 'all',
+  m: [],
+  M: false,
+  j: [Function: z]
+}
+userRoles: []
++layout/isUserAuthenticated updated: false
+SvelteKitError: Not found: /avail/prod/clients/TOS
+    at resolve2 (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4288:18)
+    at resolve (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4121:34)
+    at #options.hooks.handle (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4353:71)
+    at respond (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4119:43) {
+  status: 404,
+  text: 'Not Found'
+}
+Base path +layout: .. :
++layout user.subscribe, value: {
+  user: { id: null, email: null, name: null, picture: null },
+  practitioner: {
+    id: null,
+    name: null,
+    organizationId: null,
+    organizationName: null,
+    availability: null,
+    PractitionerRoleId: null,
+    sms: null,
+    dob: null,
+    npi: null,
+    roles: [],
+    practitionerRoles: [],
+    localOrgArray: []
+  }
+}
++layout user.subscribe NO not authenticated
++layout resetPractitionerData: userRoles preserved: []
+isHomePage changed: false
+isHomePage url: /avail/prod/clients/TOS
+*******LAYOUTuserData: { id: null, email: null, name: null, picture: null }
+ability: Ability {
+  h: false,
+  l: Map(0) {},
+  p: {
+    conditionsMatcher: [Function (anonymous)],
+    fieldMatcher: [Function: at],
+    resolveAction: [Function: I]
+  },
+  '$': 'manage',
+  A: 'all',
+  m: [],
+  M: false,
+  j: [Function: z]
+}
+userRoles: []
++layout/isUserAuthenticated updated: false
+SvelteKitError: Not found: /avail/prod/clients/TOS
+    at resolve2 (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4288:18)
+    at resolve (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4121:34)
+    at #options.hooks.handle (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4353:71)
+    at respond (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4119:43) {
+  status: 404,
+  text: 'Not Found'
+}
+Base path +layout: .. :
++layout user.subscribe, value: {
+  user: { id: null, email: null, name: null, picture: null },
+  practitioner: {
+    id: null,
+    name: null,
+    organizationId: null,
+    organizationName: null,
+    availability: null,
+    PractitionerRoleId: null,
+    sms: null,
+    dob: null,
+    npi: null,
+    roles: [],
+    practitionerRoles: [],
+    localOrgArray: []
+  }
+}
++layout user.subscribe NO not authenticated
++layout resetPractitionerData: userRoles preserved: []
+isHomePage changed: false
+isHomePage url: /avail/prod/clients/TOS
+*******LAYOUTuserData: { id: null, email: null, name: null, picture: null }
+ability: Ability {
+  h: false,
+  l: Map(0) {},
+  p: {
+    conditionsMatcher: [Function (anonymous)],
+    fieldMatcher: [Function: at],
+    resolveAction: [Function: I]
+  },
+  '$': 'manage',
+  A: 'all',
+  m: [],
+  M: false,
+  j: [Function: z]
+}
+userRoles: []
++layout/isUserAuthenticated updated: false
+SvelteKitError: Not found: /avail/prod/clients/TOS
+    at resolve2 (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4288:18)
+    at resolve (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4121:34)
+    at #options.hooks.handle (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4353:71)
+    at respond (file:///xd1/homes/hash/23/97/a19723/05/49/u184905/bin6/clinicmgr/build/server/index.js:4119:43) {
+  status: 404,
+  text: 'Not Found'
+}
+Base path +layout: .. :
++layout user.subscribe, value: {
+  user: { id: null, email: null, name: null, picture: null },
+  practitioner: {
+    id: null,
+    name: null,
+    organizationId: null,
+    organizationName: null,
+    availability: null,
+    PractitionerRoleId: null,
+    sms: null,
+    dob: null,
+    npi: null,
+    roles: [],
+    practitionerRoles: [],
+    localOrgArray: []
+  }
+}
++layout user.subscribe NO not authenticated
++layout resetPractitionerData: userRoles preserved: []
+isHomePage changed: false
+isHomePage url: /avail/prod/clients/TOS
+*******LAYOUTuserData: { id: null, email: null, name: null, picture: null }
+ability: Ability {
+  h: false,
+  l: Map(0) {},
+  p: {
+    conditionsMatcher: [Function (anonymous)],
+    fieldMatcher: [Function: at],
+    resolveAction: [Function: I]
+  },
+  '$': 'manage',
+  A: 'all',
+  m: [],
+  M: false,
+  j: [Function: z]
+}
+userRoles: []
++layout/isUserAuthenticated updated: false
+Base path +layout: . :
++layout user.subscribe, value: {
+  user: { id: null, email: null, name: null, picture: null },
+  practitioner: {
+    id: null,
+    name: null,
+    organizationId: null,
+    organizationName: null,
+    availability: null,
+    PractitionerRoleId: null,
+    sms: null,
+    dob: null,
+    npi: null,
+    roles: [],
+    practitionerRoles: [],
+    localOrgArray: []
+  }
+}
++layout user.subscribe NO not authenticated
++layout resetPractitionerData: userRoles preserved: []
+isHomePage changed: false
+isHomePage url: /avail/prod/
+*******LAYOUTuserData: { id: null, email: null, name: null, picture: null }
+ability: Ability {
+  h: false,
+  l: Map(0) {},
+  p: {
+    conditionsMatcher: [Function (anonymous)],
+    fieldMatcher: [Function: at],
+    resolveAction: [Function: I]
+  },
+  '$': 'manage',
+  A: 'all',
+  m: [],
+  M: false,
+  j: [Function: z]
+}
+userRoles: []
++layout/isUserAuthenticated updated: false
