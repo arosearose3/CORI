@@ -394,7 +394,7 @@ const unsubscribeUser = user.subscribe(async value => {
 <div class="app-container">
   <aside class="sidebar">
     <div class="sidebar-logo-container">
-      <a href="{base}/">
+      <a href="{base}">
         <img src="{base}/apple-touch-icon.png" alt="Logo" class="sidebar-logo" />
       </a>
       <div class="sidebar-title">
@@ -467,10 +467,10 @@ const unsubscribeUser = user.subscribe(async value => {
     <!-- Display selected roles if a PractitionerRole is chosen -->
     {#if selectedPractitionerRole}
       <div class="user-info">
-        <UserProfile {userData} />
+        <UserProfile {userData} {currentOrgName} />
       </div>
 
-      <div class="role-info">
+<!--       <div class="role-info">
         <p>
           Roles at {currentOrgName}:
           {#each userRoles as role, index}
@@ -478,7 +478,7 @@ const unsubscribeUser = user.subscribe(async value => {
           {/each}
         </p>
       </div>
-      <hr>
+      <hr> -->
     {/if}
 
     <slot></slot>
@@ -501,42 +501,42 @@ const unsubscribeUser = user.subscribe(async value => {
 
   .sidebar {
     position: relative;
-    padding: 20px;
+    padding: 10px;
     background-color: #f8f9fa;
     display: flex;
     flex-direction: column;
     border-right: 1px solid #ddd;
     height: 100vh;
     padding-bottom: 20px;
-    padding-right: 20px;
+    padding-right: 10px;
   }
 
   .sidebar-logo-container {
     display: flex;
     flex-direction: column;
     align-items: left;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
   }
 
   .sidebar-logo {
     width: 60px;
     height: auto;
-    margin-bottom: 10px;
+    margin-bottom: 1px;
   }
 
   .main-content {
     flex: 1;
-    padding: 20px;
+    padding: 10px;
     overflow-y: auto;
   }
 
   .footer-links {
     position: absolute;
-    bottom: 100px;
-    left: 10px;
+    bottom: 10px;
+    left: 0px;
     right: 0;
     text-align: left;
-    padding-right: 20px;
+    padding-right: 10px;
     padding-left: 20px;
   }
 
@@ -548,7 +548,7 @@ const unsubscribeUser = user.subscribe(async value => {
   }
 
   .footer-link:hover {
-    color: lightgrey;
+    color: rgb(172, 172, 172);
   }
 
   .error-message {
@@ -623,7 +623,7 @@ const unsubscribeUser = user.subscribe(async value => {
   }
 
   .auth-buttons {
-    margin-top: auto; /* Push buttons to the bottom if desired */
+     /* margin-top: auto; Push buttons to the bottom if desired */
   }
 
   /* Additional styling as needed */

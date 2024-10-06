@@ -181,11 +181,12 @@ router.patch('/patchCapacity', async (req, res) => {
       practitionerRole.extension[extensionIndex] = capacity;
     }
     
-    // Proceed with PUT request to replace the entire resource
-    const updateResponse = await fetch(`${base}/api/role/update`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(practitionerRole)
+    const updateResponse = await axios.put(`${FHIR_BASE_URL}/PractitionerRole/${practitionerRole.id}`, practitionerRole, {
+      headers: {
+        Authorization: `Bearer ${await getFhirAccessToken()}`,
+        'Content-Type': 'application/fhir+json',
+        Accept: 'application/fhir+json',
+      },
     });
 
 

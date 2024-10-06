@@ -9,6 +9,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 //import { WebSocketServer } from 'ws';
 
+import api211Routes from './routes/api211Routes.js';
 import practitionerRoutes from './routes/practitionerRoutes.js';
 import organizationRoutes from './routes/organizationRoutes.js';
 import roleRoutes from './routes/roleRoutes.js';
@@ -238,7 +239,7 @@ app.post(`${BASE_PATH}/api/send-sms`, async (req, res) => {
   }
 });
 
-
+app.use(`${BASE_PATH}/api/api211`, api211Routes);
 app.use(`${BASE_PATH}/api/practitioner`, practitionerRoutes);
 app.use(`${BASE_PATH}/api/organization`, organizationRoutes);
 app.use(`${BASE_PATH}/api/role`, roleRoutes);

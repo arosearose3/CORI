@@ -2,10 +2,14 @@
     import { onMount } from 'svelte';
     import { user } from '$lib/stores.js'; // Assuming organizationId is stored in stores.js
     import { base } from '$app/paths'; // Import base path
+    import { fly } from 'svelte/transition';
   
     let sortColumn = 'name';
     let sortDirection = 'asc';
     let message = '';
+    let showAvailability = true; // State for the checkbox
+    let loadingPractitioners = true;
+
   
     let organizationId;
     let practitioners = [];
@@ -18,6 +22,7 @@
     onMount(async () => {
       try {
         await loadPractitioners();
+        loadingPractitioners = false;
       } catch (error) {
         console.error('Error loading practitioners:', error);
         message = 'An unexpected error occurred while loading practitioners.';
@@ -137,15 +142,7 @@
       };
     }
   
-    /**
-     * Handles the deletion of a practitioner (currently a stub).
-     * @param {string} id - The ID of the practitioner to delete.
-     */
-    function handleDelete(id) {
-      alert(`Delete practitioner with ID: ${id}`);
-      // TODO: Implement actual delete functionality
-    }
-  
+
     /**
      * Sorts the practitioners array based on the specified column.
      * @param {string} column - The column to sort by.
@@ -160,11 +157,24 @@
       }
   
       practitioners = [...practitioners].sort((a, b) => {
-        if (a[sortColumn] < b[sortColumn]) return sortDirection === 'asc' ? -1 : 1;
-        if (a[sortColumn] > b[sortColumn]) return sortDirection === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
+      let aValue = a[sortColumn];
+      let bValue = b[sortColumn];
+
+      if (sortColumn === 'name') {
+        // Sort by name alphabetically
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      } else {
+        // Sort numeric columns
+        aValue = Number(aValue);
+        bValue = Number(bValue);
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
   
 
   
@@ -372,10 +382,6 @@
     return availabilityByDay;
   }
 
-
-
-  // Existing functions continue...
-
   </script>
   
   <style>
@@ -384,11 +390,12 @@
       border-collapse: collapse;
     }
   
-    th, td {
+    th,
+    td {
       padding: 10px;
       text-align: left;
       border-bottom: 1px solid #ddd;
-      vertical-align: top; /* Ensure cells align to top for multiline content */
+      vertical-align: top;
     }
   
     th {
@@ -400,54 +407,52 @@
       background-color: #ddd;
     }
   
-    .delete-btn {
-      color: red;
-      cursor: pointer;
-    }
-  
-    .message {
-      margin-top: 20px;
-      color: red;
-    }
-  
-    .available-times {
-      margin-top: 5px;
-      font-size: 0.9em;
-      color: #555;
-    }
-
-
     .availability-row {
-    font-size: 80%;
-    padding: 2px 0; /* Reduce vertical padding */
-  }
-
-  .day-label {
-    font-weight: normal;
-  }
-
-  .availability-bar {
-    position: relative;
-    height: 5px; /* Reduced height */
-    background-color: lightblue;
-    width: 100%;
-    border: 1px solid #ccc;
-    margin-top: 2px;
-  }
-
-  .availability-segment {
-    position: absolute;
-    height: 100%;
-    background-color: darkblue;
-  }
+      font-size: 80%;
+      padding: 2px 0; /* Reduce vertical padding */
+    }
+  
+    .day-label {
+      font-weight: normal;
+    }
+  
+    .availability-bar {
+      position: relative;
+      height: 5px; /* Reduced height */
+      background-color: lightblue;
+      width: 100%;
+      border: 1px solid #ccc;
+      margin-top: 2px;
+    }
+  
+    .availability-segment {
+      position: absolute;
+      height: 100%;
+      background-color: darkblue;
+    }
+  
+    /* Checkbox styling */
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
   </style>
   
-  <!-- Table UI -->
+  
+ 
+  <!-- Show Availability Checkbox -->
+<span><label>
+  <input type="checkbox" bind:checked={showAvailability} />
+  Show Availability
+</label>
+  {#if loadingPractitioners}Loading Practitioner Data...{/if}
+</span>
+<!-- Table UI -->
 {#if practitioners.length > 0}
 <table>
   <thead>
     <tr>
-    
       <th on:click={() => sortTable('name')}>Practitioner Name</th>
       <th on:click={() => sortTable('kids')}>Kids</th>
       <th on:click={() => sortTable('teens')}>Teens</th>
@@ -459,9 +464,6 @@
   <tbody>
     {#each practitioners as practitioner}
       <tr>
-<!--         <td>
-          <span class="delete-btn" on:click={() => handleDelete(practitioner.id)}>🗑️</span>
-        </td> -->
         <td>{practitioner.name}</td>
         <td>{practitioner.kids}</td>
         <td>{practitioner.teens}</td>
@@ -469,10 +471,9 @@
         <td>{practitioner.couples}</td>
         <td>{practitioner.families}</td>
       </tr>
-      {#if getAvailabilityByDay(practitioner.availableTimes)}
+      {#if showAvailability && getAvailabilityByDay(practitioner.availableTimes)}
         {#each getAvailabilityByDay(practitioner.availableTimes) as dayInfo}
-          <tr>
-           
+          <tr transition:fly="{{ y: -10, duration: 200 }}">
             <!-- Day label aligned under Practitioner Name column -->
             <td class="availability-row day-label">
               {dayInfo.day} {dayInfo.timeRanges.join(', ')}
@@ -498,6 +499,6 @@
   </tbody>
 </table>
 {:else}
-<p class="message">{message || 'No practitioners found.'}</p>
+<p class="message">{message || ''}</p>
 {/if}
 

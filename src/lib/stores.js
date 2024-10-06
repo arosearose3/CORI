@@ -20,6 +20,9 @@ const initialUserState = {
     organizationName: null,
     availability: null,
     PractitionerRoleId: null,
+    sms: null,
+    dob: null,
+    npi: null,
     roles: [], // Array to store roles
   },
 };

@@ -1,6 +1,7 @@
 <!-- src/lib/components/UserProfile.svelte -->
 <script>
   export let userData = null;
+  export let currentOrgName = null;
 </script>
 
 <style>
@@ -8,11 +9,12 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-top: 20px;
+    margin-top: 1px;
   }
 
   .user-info {
-    text-align: left;
+    display: flex;
+    align-items: flex-start; /* Aligns text at the top */
   }
 
   .user-profile img {
@@ -20,6 +22,13 @@
     width: 50px;
     height: 50px;
     object-fit: cover;
+    margin-right: 10px;
+  }
+
+  .user-details {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
   }
 
   .name {
@@ -36,13 +45,12 @@
 
 {#if userData}
   <div class="user-profile">
-    <!-- Left-aligned name and email -->
     <div class="user-info">
-      <div class="name">{userData.name}</div>
-      <div class="email">{userData.email}</div>
+      <img src="{userData.picture}" alt="{userData.name}'s profile picture" />
+      <div class="user-details">
+        <div class="name">{userData.name} at {currentOrgName}</div>
+        <div class="email">{userData.email}</div>
+      </div>
     </div>
-
-    <!-- Right-aligned profile picture -->
-    <img src="{userData.picture}" alt="{userData.name}'s profile picture" />
   </div>
 {/if}
