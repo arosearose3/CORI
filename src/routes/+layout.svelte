@@ -55,6 +55,17 @@
     console.log('isHomePage url:', $page.url.pathname);
   }
 
+  $: {
+  console.log('*******userData:', userData);
+  console.log('ability:', ability);
+  console.log('userRoles:', userRoles);
+}
+
+$: {
+  isUserAuthenticated = !!userData?.id;
+  console.log('isUserAuthenticated updated:', isUserAuthenticated);
+}
+
   // Navigation logging
   afterNavigate(() => {
     console.log(`Navigated to: ${$page.url.pathname}`);
@@ -93,17 +104,11 @@ const unsubscribeUser = user.subscribe(async value => {
   isUserAuthenticated = !!userData?.id;
 
   if (isUserAuthenticated && userData?.email && !hasFetchedPractitionerData) {
-
     console.log("+layout user.subscribe YES authenticated");
     isFetchingPractitioner = true;
     await fetchPractitionerData(userData.email);
     hasFetchedPractitionerData = true;
     isFetchingPractitioner = false;
-
-    // Initialize FHIR auth only after user is authenticated
-    /* if (!isFhirAuthenticated) {
-      await initializeFhirAuth();
-    } */
   } 
   if (!isUserAuthenticated) {
     console.log("+layout user.subscribe NO not authenticated");
@@ -113,9 +118,7 @@ const unsubscribeUser = user.subscribe(async value => {
     resetPractitionerData();
     abilities.set(new Ability([]));
     isFhirAuthenticated = false;
-
-    // Clear user information from the store
-    user.set(null);
+    hasFetchedPractitionerData = false;
   }
 });
 
@@ -138,20 +141,9 @@ const unsubscribeUser = user.subscribe(async value => {
   }
 
   // Initialize authentication on component mount
-  onMount(async () => {
-/*     try {
-      await initGoogleAuth(base); // Initialize Google Auth which should fetch and set user data
-      isInitializing = false;
-    } catch (error) {
-      console.error('Google Auth Initialization error:', error);
-      fetchError = 'Authentication Initialization failed. Please try again.';
-      isInitializing = false;
-    } */
-  
-    console.log('Base path in layout/onMount:', base); 
+  onMount(async () => {  
     console.log('Base path in layout/onMount:', base);
     await checkUserAuthStatus(base); // Call checkAuthStatus to retrieve and set user data
-
   });
 
   // Clean up subscriptions on component destroy
@@ -176,29 +168,35 @@ const unsubscribeUser = user.subscribe(async value => {
 
   // Function to handle user logout
   async function handleLogout() {
-    console.log('handleLogout called with base:', base);
-    try {
-      const result = await logoutGoogleUser(base);
-      if (result && result.success) {
-        isUserAuthenticated = false;
-        if (isFhirAuthenticated) {
-          await disconnectFhirAuth(base);
-        }
-        resetPractitionerData();
-        abilities.set(new Ability([]));
-        isFhirAuthenticated = false;
+  console.log('handleLogout called with base:', base);
+  try {
+    const result = await logoutGoogleUser(base);
+    if (result && result.success) {
+      // Clear user data
+      user.set({ user: null, practitioner: null });
+      
+      // Reset authentication states
+      isUserAuthenticated = false;
+      isFhirAuthenticated = false;
 
-        user.set(null); // Ensure user store is cleared
-        goto(`${base}/`); // Redirect to the base path
-      } else {
-        console.error('Logout failed:', result.error);
-        // Optionally set an error state to display to the user
-      }
-    } catch (error) {
-      console.error('Error during logout:', error);
+      // Reset other states
+      resetPractitionerData();
+      abilities.set(new Ability([]));
+
+      // Force a re-render by updating a reactive variable
+      userData = null;
+
+      // Redirect to the base path
+      goto(`${base}/`);
+    } else {
+      console.error('Logout failed:', result.error);
       // Optionally set an error state to display to the user
     }
+  } catch (error) {
+    console.error('Error during logout:', error);
+    // Optionally set an error state to display to the user
   }
+}
 
   // Function to handle connecting to FHIR
   async function handleConnectFhir() {
@@ -305,14 +303,19 @@ const unsubscribeUser = user.subscribe(async value => {
           .map(entry => entry.resource)
           .filter(resource => resource.resourceType === 'PractitionerRole');
 
-        // Load localOrgArray
-        localOrgArray = []; // Reset to avoid duplicates
-        for (const role of practitionerRoles) {
-          if (role.organization && role.organization.reference) {
-            let orgName = await getOrganizationName(role.organization.reference);
-            localOrgArray.push({ name: orgName, id: role.organization.reference });
+          const uniqueOrgRefs = new Set();
+          localOrgArray = [];  // Reset the array
+
+          for (const role of practitionerRoles) {
+            if (role.organization && role.organization.reference) {
+              const orgRef = role.organization.reference;
+              if (!uniqueOrgRefs.has(orgRef)) {
+                uniqueOrgRefs.add(orgRef);
+                let orgName = await getOrganizationName(orgRef);
+                localOrgArray.push({ name: orgName, id: orgRef });
+              }
+            }
           }
-        }
         console.log("+layout/fetchPR localOrgArray:" + JSON.stringify(localOrgArray));
         console.log("+layout/fetchPR pract[0]:" + JSON.stringify(practitionerRoles[0]));
 
@@ -365,7 +368,7 @@ const unsubscribeUser = user.subscribe(async value => {
     showRoleSelection = false;
   }
 
-  // Function to update the practitioner store with selected role
+/*   // Function to update the practitioner store with selected role
   function updatePractitionerStore(pr) {
     user.update(store => {
       const updatedStore = { ...store };
@@ -380,7 +383,28 @@ const unsubscribeUser = user.subscribe(async value => {
       };
       return updatedStore;
     });
-  }
+  } */
+
+  function updatePractitionerStore(pr) {
+  user.update(store => {
+    console.log("Previous store state:", store);
+    const updatedStore = {
+      ...store,
+      practitioner: {
+        ...store.practitioner,
+        id: pr.practitioner?.reference?.split('/')[1] || store.practitioner?.id,
+        name: practitionerName || store.practitioner?.name,
+        organizationId: pr.organization?.reference?.split('/')[1] || store.practitioner?.organizationId,
+        organizationName: pr.organization?.name || store.practitioner?.organizationName,
+        availability: pr.availability || store.practitioner?.availability,
+        PractitionerRoleId: pr.id || store.practitioner?.PractitionerRoleId,
+        roles: userRoles.length > 0 ? userRoles : store.practitioner?.roles || []
+      }
+    };
+    console.log("Updated store state:", updatedStore);
+    return updatedStore;
+  });
+}
 
   // Reactive statement to update abilities based on user roles
   $: if ($user) {

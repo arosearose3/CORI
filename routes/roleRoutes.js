@@ -150,9 +150,6 @@ router.patch('/patchAvailability', async (req, res) => {
 
 
 router.patch('/patchCapacity', async (req, res) => {
-  // 9/29/24 pulled PATCH as it does not work if there is no extension, no completely
-  // replacing the PractitionerRole resource with the appended or replaced Capacity
-  // 
   const { practitionerRole, capacity } = req.body;
   if (!practitionerRole || !capacity) {
     return res.status(400).json({ error: 'practitionerRole and Capacity object are required.' });
@@ -161,15 +158,11 @@ router.patch('/patchCapacity', async (req, res) => {
     return res.status(400).json({ error: 'practitionerRole.id is required.' });
   }
 
-  let patchResource;
-  console.log ("patch PR:"+JSON.stringify(practitionerRole));
-  console.log ("patch capacity:"+JSON.stringify(capacity));
   try {
-
     if (!practitionerRole.extension) {
-      practitionerRole.extension = [];  // Initialize if it's undefined
+      practitionerRole.extension = [];
     }
-    // Find the index of the extension with the specific URL
+
     const extensionIndex = practitionerRole.extension?.findIndex(
       (ext) =>
         ext.url === 'https://combinebh.org/resources/FHIRResources/PractitionerCapacityFHIRExtension.html'
@@ -180,25 +173,28 @@ router.patch('/patchCapacity', async (req, res) => {
     } else {
       practitionerRole.extension[extensionIndex] = capacity;
     }
-    
-    const updateResponse = await axios.put(`${FHIR_BASE_URL}/PractitionerRole/${practitionerRole.id}`, practitionerRole, {
+
+    const accessToken = await getFhirAccessToken();
+    const searchUrl = `${FHIR_BASE_URL}/PractitionerRole/${practitionerRole.id}`;
+    console.log("cap patch/update search:" + searchUrl);
+    console.log("****cap patch /update obj:" + JSON.stringify(practitionerRole));
+
+    const updateResponse = await axios.put(searchUrl, practitionerRole, {
       headers: {
-        Authorization: `Bearer ${await getFhirAccessToken()}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/fhir+json',
         Accept: 'application/fhir+json',
       },
     });
 
-
-    // Check if the PUT request was successful
-    if (!updateResponse.ok) {
-      throw new Error('Failed to update PractitionerRole.');
+    // Axios doesn't have an 'ok' property, so we check the status directly
+    if (updateResponse.status !== 200) {
+      throw new Error(`Failed to update PractitionerRole. Status: ${updateResponse.status}`);
     }
 
-    // Parse the response from the `/update` endpoint
-    const updatedPractitionerRole = await updateResponse.json();
-    
-    // Return the updated PractitionerRole to the client
+    // Axios already parses the JSON for us, so we can access data directly
+    const updatedPractitionerRole = updateResponse.data;
+
     res.status(200).json({
       message: 'PractitionerRole capacity updated successfully',
       data: updatedPractitionerRole
@@ -233,60 +229,60 @@ router.patch('/patchRoles', async (req, res) => {
     // Find the existing PractitionerRole
     let practitionerRoleId;
     try {
-      const findResponse = await axios.get(`http://localhost:8080/avail/api/role/findPractitionerRole`, {
-        params: { practitioner: `Practitioner/${practitionerId}`, organizationId },
-        headers: { Authorization: `Bearer ${accessToken}` },
+      const findResponse = await axios.get(`${FHIR_BASE_URL}/PractitionerRole`, {
+        params: { 
+          practitioner: `Practitioner/${practitionerId}`,
+          organization: `Organization/${organizationId}`
+        },
+        headers: { 
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/fhir+json'
+        },
       });
 
-      const { practitionerRoleId: foundRoleId } = await handleBlobResponse(findResponse.data);
-      practitionerRoleId = foundRoleId;
+      const bundle = await handleBlobResponse(findResponse.data);
+      const matchingRole = bundle.entry?.find(entry => 
+        entry.resource.practitioner?.reference === `Practitioner/${practitionerId}` &&
+        entry.resource.organization?.reference === `Organization/${organizationId}`
+      );
+
+      practitionerRoleId = matchingRole?.resource.id;
     } catch (findError) {
-      // If not found, handle it in the next block
+      console.error('Error finding PractitionerRole:', findError.message);
       if (!findError.response || findError.response.status !== 404) {
-        console.error('Error finding PractitionerRole:', findError.message);
-        return res.status(500).json({ message: 'Failed to find PractitionerRole', error: findError.message });
+        return res.status(500).json({ error: 'Failed to find PractitionerRole', details: findError.message });
       }
     }
 
- // If the PractitionerRole exists, attempt to patch it
-if (practitionerRoleId) {
-  try {
-    const patchResource = [
-      // First attempt to replace the /code path
-      {
-        op: 'replace',
-        path: '/code',
-        value: roles.map(role => ({
-          coding: [{ system: 'https://combinebh.org/cori-value-set/', code: role }],
-        })),
-      },
-      // Fallback to add the /code path if replace fails
-      {
-        op: 'add',
-        path: '/code',
-        value: roles.map(role => ({
-          coding: [{ system: 'https://combinebh.org/cori-value-set/', code: role }],
-        })),
-      },
-    ];
+    // If the PractitionerRole exists, attempt to patch it
+    if (practitionerRoleId) {
+      try {
+        const patchResource = [
+          {
+            op: 'replace',
+            path: '/code',
+            value: roles.map(role => ({
+              coding: [{ system: 'https://combinebh.org/cori-value-set/', code: role }],
+            })),
+          },
+        ];
 
-    const patchUrl = `${FHIR_BASE_URL}/PractitionerRole/${practitionerRoleId}`;
-    const accessToken = await getFhirAccessToken();
+        const patchUrl = `${FHIR_BASE_URL}/PractitionerRole/${practitionerRoleId}`;
 
-    const patchResponse = await axios.patch(patchUrl, patchResource, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json-patch+json',
-        Accept: 'application/fhir+json',
-      },
-    });
+        const patchResponse = await axios.patch(patchUrl, patchResource, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json-patch+json',
+            Accept: 'application/fhir+json',
+          },
+        });
 
-    return res.status(200).json({ message: 'PractitionerRole patched successfully', data: patchResponse.data });
-  } catch (patchError) {
-    console.error('Error patching PractitionerRole:', patchError.message);
-    return res.status(500).json({ message: 'Failed to patch PractitionerRole', error: patchError.message });
-  }
-}
+        return res.status(200).json({ message: 'PractitionerRole patched successfully', data: patchResponse.data });
+      } catch (patchError) {
+        console.error('Error patching PractitionerRole:', patchError.message);
+        return res.status(500).json({ error: 'Failed to patch PractitionerRole', details: patchError.message });
+      }
+    }
 
     // If no existing PractitionerRole is found, create a new one
     const createRoleResource = {
@@ -300,31 +296,26 @@ if (practitionerRoleId) {
     };
 
     try {
-
-    
       const createUrl = `${FHIR_BASE_URL}/PractitionerRole`;
-      const accessToken = await getFhirAccessToken();
 
-
-      
       const createResponse = await axios.post(createUrl, createRoleResource, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/fhir+json',
+          Accept: 'application/fhir+json',
         },
       });
 
       return res.status(201).json({ message: 'PractitionerRole created successfully', data: createResponse.data });
     } catch (createError) {
       console.error('Error creating PractitionerRole:', createError.message);
-      return res.status(500).json({ message: 'Failed to create PractitionerRole', error: createError.message });
+      return res.status(500).json({ error: 'Failed to create PractitionerRole', details: createError.message });
     }
   } catch (error) {
     console.error('Error processing request:', error.message);
-    res.status(500).json({ message: 'An error occurred while processing the request.', error: error.message });
+    res.status(500).json({ error: 'An error occurred while processing the request', details: error.message });
   }
 });
-
 
 // Get all PractitionerRoles
 router.get('/all', async (req, res) => {
