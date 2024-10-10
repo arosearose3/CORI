@@ -14,7 +14,7 @@
   function setPractitionerData(value) {
     if (value && value.practitioner && value.practitioner.Pid) {
       practitionerId = value.practitioner.Pid;
-      currentPractitionerRoleId = value.practitioner.PRId;
+      currentPractitionerRoleId = value.practitioner.PRid;
       isLoading = false;
       console.log('capacity/+page Practitioner data loaded:', value.practitioner);
     } else {

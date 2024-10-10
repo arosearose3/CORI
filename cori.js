@@ -9,6 +9,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 //import { WebSocketServer } from 'ws';
 
+import availabilityRoutes from './routes/availabilityRoutes.js';
+import serverstatsRoutes from './routes/serverstatsRoutes.js';
 import api211Routes from './routes/api211Routes.js';
 import practitionerRoutes from './routes/practitionerRoutes.js';
 import organizationRoutes from './routes/organizationRoutes.js';
@@ -27,10 +29,7 @@ import { BASE_PATH } from './serverutils.js'; // Adjust the path as necessary
 dotenv.config(); // Load environment variables
 const app = express();
 const server = http.createServer(app);
-const PORT = 3000;
-
-
-
+const PORT = 8080;
 
 // Setup Google OAuth2 client
 const oauth2Client = new OAuth2Client(
@@ -39,16 +38,22 @@ const oauth2Client = new OAuth2Client(
   process.env.GOOGLE_REDIRECT_URI // Should be your redirect URI
 );
 
-/*
-// Middleware configuration
+
+/* // Middleware configuration
 app.use(cors({
-  origin: process.env.CLIENT_URL, // Ensure this is set in your .env file
+//  origin: process.env.CLIENT_URL, // Ensure this is set in your .env file
+  origin: '*',
   credentials: true
 }));
-*/
+ */
 
 app.use(express.json());
 app.use(express.static('public'));
+
+app.use((req, res, next) => {
+  console.log('Route called:', req.method, req.url);
+  next();
+});
 
 // Session management
 app.use(session({
@@ -218,28 +223,10 @@ app.post(`${BASE_PATH}/auth/logout`, (req, res) => {
   }
 });
 
-app.post(`${BASE_PATH}/api/send-sms`, async (req, res) => {
-  const { message, phoneNumber } = req.body;
 
-  if (!message || !phoneNumber) {
-    return res.status(400).json({ error: 'Message and phone number are required' });
-  }
-
-  try {
-    const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-    const result = await client.messages.create({
-      body: message,
-      messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
-      to: phoneNumber
-    });
-    res.status(200).json({ sid: result.sid });
-  } catch (error) {
-    console.error('Error sending SMS:', error);
-    res.status(500).json({ error: 'Failed to send SMS' });
-  }
-});
 
 app.use(`${BASE_PATH}/api/api211`, api211Routes);
+app.use(`${BASE_PATH}/api/availability`, availabilityRoutes);
 app.use(`${BASE_PATH}/api/practitioner`, practitionerRoutes);
 app.use(`${BASE_PATH}/api/organization`, organizationRoutes);
 app.use(`${BASE_PATH}/api/role`, roleRoutes);
@@ -250,6 +237,7 @@ app.use(`${BASE_PATH}/api/goal`, goalRoutes);
 app.use(`${BASE_PATH}/api/provenance`, provenanceRoutes);
 app.use(`${BASE_PATH}/api/task`, taskRoutes);
 app.use(`${BASE_PATH}/api/servicerequest`, serviceRequestRoutes);
+app.use(`${BASE_PATH}/api/serverstats`, serviceRequestRoutes);
 
 
 

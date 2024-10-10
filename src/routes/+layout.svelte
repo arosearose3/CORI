@@ -369,6 +369,7 @@
     return;
   }
 
+  currentOrgName = orgName;
   const userRoles = (selectedRole.code || [])
     .flatMap(c =>
       (c.coding || [])
@@ -393,7 +394,7 @@
       roles: userRoles
     }
   }));
-
+  selectedPractitionerRole = selectedRole;
   updateAbilities(userRoles);
   showRoleSelection = false;
 }
@@ -402,45 +403,46 @@
 
 <div class="app-container">
   <aside class="sidebar">
-    <div class="sidebar-logo-container">
-      <a href="{base}">
-        <img src="{base}/apple-touch-icon.png" alt="Logo" class="sidebar-logo" />
-      </a>
-      <div class="sidebar-title">
-        Colorado<br />
-        Referral<br />
-        Information
+    <div class="sidebar-content">
+      <div class="sidebar-header">
+        <a href="{base}" class="sidebar-logo-container">
+          <img src="{base}/apple-touch-icon.png" alt="Logo" class="sidebar-logo" />
+          <div class="sidebar-title">
+            Colorado<br />
+            Referral<br />
+            Information
+          </div>
+        </a>
+      </div>
+  
+      <Navigation
+        {isUserAuthenticated}
+        {practitionerId}
+        {practitionerName}
+        {practitionerRoles}
+        {organizations}
+        {selectPractitionerRole}
+        {handleLogin}
+        {handleLogout}
+        {handleConnectFhir}
+        {handleDisconnectFhir}
+        {isFhirAuthenticated}
+        {fhirError}
+      />
+  
+      <div class="auth-buttons">
+        {#if isUserAuthenticated}
+          <button class="nav-button logout" on:click={handleLogout} aria-label="Log Out">Logout</button>
+        {:else}
+          <button class="nav-button" on:click={handleLogin} aria-label="Log In with Google">Login with Google</button>
+        {/if}
       </div>
     </div>
-
-    <Navigation
-      {isUserAuthenticated}
-      {practitionerId}
-      {practitionerName}
-      {practitionerRoles}
-      {organizations}
-      {selectPractitionerRole}
-      {handleLogin}
-      {handleLogout}
-      {handleConnectFhir}
-      {handleDisconnectFhir}
-      {isFhirAuthenticated}
-      {fhirError}
-    />
-
-    <!-- Authentication Buttons -->
-    <div class="auth-buttons">
-      {#if isUserAuthenticated}
-        <button class="nav-button logout" on:click={handleLogout} aria-label="Log Out">Logout</button>
-      {:else}
-        <button class="nav-button" on:click={handleLogin} aria-label="Log In with Google">Login with Google</button>
-      {/if}
-    </div>
-
+  
     <div class="footer-links">
-      <a href="{base}/TOS" class="footer-link">Cori Terms of Service</a><br>
-      <a href="{base}/PrivacyPolicy" class="footer-link">Privacy Policy</a><br><br>
-      <span>© 2024 Cori, a Colorado 501(c)(3)</span>
+      <a href="{base}/TOS" class="footer-link">Cori Terms of Service</a>
+      <a href="{base}/PrivacyPolicy" class="footer-link">Privacy Policy</a>
+      <span class="copyright">© 2024 Cori, a Colorado 501(c)(3)</span>
     </div>
   </aside>
 
@@ -453,15 +455,12 @@
       <div class="error-message">{fetchError}</div>
     {:else if showRoleSelection}
 
-      {console.log('About to render RoleSelection')}
-      {console.log('localOrgArray:', $user.practitioner?.localOrgArray)}
-      {console.log('practitionerRoles:', $user.practitioner?.practitionerRoles)}
       <RoleSelection 
         onSelectRole={selectPractitionerRole}
         localOrgArray={$user.practitioner?.localOrgArray || []}
         practitionerRoles={$user.practitioner?.practitionerRoles || []}
       />
-      {console.log('RoleSelection rendered')}
+    
      
     {:else}
       {#if selectedPractitionerRole}
@@ -470,7 +469,9 @@
         </div>
       {/if}
 
+ 
       <slot></slot>
+   
       {#if isHomePage}
         <HomepageText />
       {/if}
@@ -490,29 +491,43 @@
   }
 
   .sidebar {
-  position: relative;
-  padding: 10px;
-  background-color: #f8f9fa;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid #ddd;
-  height: 100vh;
-  padding-bottom: 20px;
-  padding-right: 10px;
-  overflow-y: auto; /* Add vertical scroll when content exceeds height */
-}
+    display: flex;
+    flex-direction: column;
+    background-color: #f8f9fa;
+    border-right: 1px solid #ddd;
+    height: 100vh;
+    min-width: 250px; /* Ensure minimum width */
+    overflow-y: auto;
+  }
+
+  .sidebar-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .sidebar-header {
+    margin-bottom: 20px;
+  }
 
   .sidebar-logo-container {
     display: flex;
-    flex-direction: column;
-    align-items: left;
-    margin-bottom: 14px;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
   }
 
   .sidebar-logo {
     width: 60px;
     height: auto;
-    margin-bottom: 1px;
+    margin-right: 10px;
+  }
+
+  .sidebar-title {
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1.2;
   }
 
   .main-content {
@@ -522,24 +537,24 @@
   }
 
   .footer-links {
-    position: absolute;
-    bottom: 10px;
-    left: 0px;
-    right: 0;
-    text-align: left;
-    padding-right: 10px;
-    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background-color: #f0f0f0;
   }
 
   .footer-link {
     text-decoration: none;
     color: inherit;
-    display: inline-block;
-    padding-bottom: 3px;
+    margin-bottom: 5px;
   }
 
   .footer-link:hover {
     color: rgb(172, 172, 172);
+  }
+  .copyright {
+    font-size: 12px;
+    margin-top: 10px;
   }
 
   .error-message {
@@ -591,6 +606,7 @@
     font-size: 16px;
     transition: background-color 0.3s ease;
     margin-bottom: 10px;
+    width:100%;
   }
 
   .nav-button:hover {
@@ -614,7 +630,7 @@
   }
 
   .auth-buttons {
-     /* margin-top: auto; Push buttons to the bottom if desired */
+    margin-top: 20px;
   }
 
   /* Additional styling as needed */

@@ -3,6 +3,7 @@
     import { user } from '$lib/stores.js'; // Assuming organizationId is stored in stores.js
     import { base } from '$app/paths'; // Import base path
     import { fly } from 'svelte/transition';
+    import RecordButton from './RecordButton.svelte';
   
     let sortColumn = 'name';
     let sortDirection = 'asc';
@@ -14,6 +15,8 @@
     let organizationId;
     let practitioners = [];
     let errorMessage = '';
+    let scoredAvailability;
+    let pscoredAvailability;
   
     // Access the organizationId from the practitioner object in the user store
     $: organizationId = $user?.practitioner?.organizationId;
@@ -56,9 +59,11 @@
             const practitionerData = await fetchPractitionerDetails(practitionerId);
             const capacity = getCapacity(role.extension);
             const availableTimes = role.availableTime || []; // Extract availableTime
+            const lastUpdate = formatLastUpdate(role.meta.lastUpdated);
   
             // Combine all relevant data into a single object
             loadedPractitioners.push({
+              lastUpdate : lastUpdate,
               id: practitionerId,
               name: practitionerData.name,
               birthDate: practitionerData.birthDate,
@@ -86,11 +91,8 @@
     async function fetchPractitionerDetails(practitionerId) {
       try {
         const response = await fetch(`${base}/api/practitioner/${practitionerId}`);
-        const data = await response.json();
-  
-        if (data.resourceType === 'Bundle' && Array.isArray(data.entry) && data.entry.length > 0) {
-          const practitioner = data.entry[0].resource; // Access the practitioner resource
-  
+        const practitioner = await response.json(); // Directly get the practitioner resource
+
           // **Corrected Name Construction: Given Names First, Then Family Name**
           const givenNames = practitioner.name?.[0]?.given?.join(' ') || '';
           const familyName = practitioner.name?.[0]?.family || 'Unknown';
@@ -100,11 +102,10 @@
             name: fullName,
             birthDate: practitioner.birthDate || 'Unknown',
           };
-        } else {
-          console.error('Invalid Practitioner resource format.');
-          return { name: 'Unknown', birthDate: 'Unknown' };
         }
-      } catch (error) {
+        
+      
+       catch (error) {
         console.error(`Error fetching practitioner details for ID ${practitionerId}:`, error);
         return { name: 'Unknown', birthDate: 'Unknown' };
       }
@@ -148,6 +149,12 @@
      * @param {string} column - The column to sort by.
      */
     function sortTable(column) {
+
+      if (column === 'score' && scoredAvailability) {
+      sortPractitionersByScore();
+      return;
+    }
+
       if (sortColumn === column) {
         // Toggle sort direction if the same column is clicked
         sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
@@ -316,6 +323,7 @@
     // Same period, only add period at the end
     return `${startHour}${startMinute}-${endHour}${endMinute}${startPeriod}`;
   }
+
   }
 
   /**
@@ -382,9 +390,123 @@
     return availabilityByDay;
   }
 
+
+  function formatLastUpdate(timestamp) {
+    const date = new Date(timestamp);
+  
+    // Get month names in three-letter format
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = monthNames[date.getMonth()];
+    const day = date.getDate();
+  
+    // Get hours and format as 12-hour clock
+    let hours = date.getHours();
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // Convert 0 to 12 for midnight
+  
+    // Get minutes and remove leading zero
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+  
+    // Return formatted string
+    return `${month} ${day}, ${hours}:${minutes} ${ampm}`;
+}
+
+  // Define the handler for when availability is processed in RecordButton
+  function handleAvailabilityProcessed(event) {
+    const structuredAvailability = event.detail.structuredAvailability;
+    scoredAvailability = scoreAvailability(structuredAvailability);
+    console.log ("OrgPract scoredA:"+JSON.stringify(scoredAvailability));
+    pscoredAvailability = JSON.stringify(scoredAvailability);
+    sortPractitionersByScore();
+
+  }
+
+
+  function scoreAvailability(jsonA) {
+
+    let availabilityRequest;
+  if (typeof jsonA === 'string') {
+    availabilityRequest = JSON.parse(jsonA).availableTime;
+  } else {
+    availabilityRequest = jsonA.availableTime;
+  }
+  const scores = [];
+
+  practitioners.forEach((practitioner, index) => {
+    if (practitioner && practitioner.availableTimes && Array.isArray(practitioner.availableTimes) && practitioner.availableTimes.length > 0) {
+      let totalScore = 0;
+      let totalMatches = 0;
+
+      availabilityRequest.forEach((requestedSlot) => {
+        let matched = false;
+        practitioner.availableTimes.forEach((practitionerSlot) => {
+          if (practitionerSlot.daysOfWeek && practitionerSlot.daysOfWeek.length > 0 && requestedSlot.daysOfWeek.some(day => practitionerSlot.daysOfWeek.includes(day))) {
+            // Calculate overlap between requestedSlot and practitionerSlot
+            const requestedStart = timeToMinutes(requestedSlot.availableStartTime);
+            const requestedEnd = timeToMinutes(requestedSlot.availableEndTime);
+            const practitionerStart = timeToMinutes(practitionerSlot.availableStartTime);
+            const practitionerEnd = timeToMinutes(practitionerSlot.availableEndTime);
+
+            const overlapStart = Math.max(requestedStart, practitionerStart);
+            const overlapEnd = Math.min(requestedEnd, practitionerEnd);
+
+            if (overlapStart < overlapEnd) {
+              const overlapDuration = overlapEnd - overlapStart;
+              const requestedDuration = requestedEnd - requestedStart;
+              totalScore += overlapDuration / requestedDuration;
+              matched = true;
+            }
+          }
+        });
+        if (matched) {
+          totalMatches += 1;
+        }
+      });
+
+      const finalScore = totalMatches > 0 ? totalScore / totalMatches : 0;
+      scores.push({ name: practitioner.name, score: finalScore });
+    } else {
+      console.error(`Practitioner at index ${index} is missing availability or is not formatted correctly:`, practitioner);
+      scores.push({ name: practitioner?.name || `unknown-${index}`, score: 0 });
+    }
+  });
+
+  return scores;
+}
+
+function sortPractitionersByScore() {
+    if (!scoredAvailability) return;
+
+    // Create a map of practitioner names to scores for quick lookup
+    const scoreMap = new Map(scoredAvailability.map(item => [item.name, item.score]));
+
+    // Sort the practitioners array based on scores
+    practitioners = practitioners.sort((a, b) => {
+      const scoreA = scoreMap.get(a.name) || 0;
+      const scoreB = scoreMap.get(b.name) || 0;
+      return scoreB - scoreA; // Sort in descending order
+    });
+
+    // Update sort column and direction
+    sortColumn = 'score';
+    sortDirection = 'desc';
+  }
+
+ function timeToMinutes(time) {
+  const [hours, minutes, seconds] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+
   </script>
   
   <style>
+
+.score-column {
+    background-color: #e6f3ff; /* Light blue background for the score column */
+  }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -448,12 +570,36 @@
 </label>
   {#if loadingPractitioners}Loading Practitioner Data...{/if}
 </span>
+
+<!--Audio Processing UI-->
+
+<RecordButton on:availabilityProcessed={handleAvailabilityProcessed} />
+
+  <!-- Display scored availability result -->
+  {#if scoredAvailability}
+  <div>
+    <h4>Scored Availability</h4>
+    <ul>
+      {#each scoredAvailability.sort((a, b) => b.score - a.score) as { name, score }}
+        {#if score>0}
+        <li>{name}: {score.toFixed(2)}</li>
+        {/if}
+      {/each}
+    </ul>
+  </div>
+  {/if}
+
+
+
 <!-- Table UI -->
 {#if practitioners.length > 0}
 <table>
   <thead>
     <tr>
       <th on:click={() => sortTable('name')}>Practitioner Name</th>
+      {#if scoredAvailability}
+        <th on:click={() => sortTable('score')} class="score-column">Availability Score</th>
+      {/if}
       <th on:click={() => sortTable('kids')}>Kids</th>
       <th on:click={() => sortTable('teens')}>Teens</th>
       <th on:click={() => sortTable('adults')}>Adults</th>
@@ -464,7 +610,12 @@
   <tbody>
     {#each practitioners as practitioner}
       <tr>
-        <td>{practitioner.name}</td>
+        <td>{practitioner.name}   ({practitioner.lastUpdate})</td>
+        {#if scoredAvailability}
+        <td class="score-column">
+          {(scoredAvailability.find(s => s.name === practitioner.name)?.score || 0).toFixed(2)}
+        </td>
+      {/if}
         <td>{practitioner.kids}</td>
         <td>{practitioner.teens}</td>
         <td>{practitioner.adults}</td>

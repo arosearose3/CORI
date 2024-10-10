@@ -2,6 +2,9 @@
 <script>
   export let userData = null;
   export let currentOrgName = null;
+
+  console.log ("In UserProfile userData:"+JSON.stringify(userData)+" orgname:"+currentOrgName);
+  
 </script>
 
 <style>

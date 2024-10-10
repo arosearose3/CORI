@@ -29,7 +29,7 @@
   </script>
   
   <div class="role-selection">
-    <h2>Select Your Organization</h2>
+    <h5>Select Your Organization</h5>
     {#if localOrgArray.length === 0}
       <p>No organizations available. Please contact your administrator.</p>
     {:else}
@@ -43,6 +43,7 @@
         {/if}
       {/each}
     {/if}
+
   </div>
   
   <style>

@@ -3,11 +3,11 @@
   </script>
   
   <div class="terms-of-service">
-    <h1>Terms of Service</h1>
-    <p>Last Updated: {lastUpdated}</p>
+    <h4>Terms of Service</h4>
+    <p>Updated {lastUpdated}</p>
   
     <section>
-      <h2>Introduction</h2>
+      <h5>Introduction</h5>
       <p>
         Welcome to Cori, for Colorado Referral Information, a platform designed to support behavioral health
         and human services professionals, organization administrators, and public health officials.
@@ -16,7 +16,7 @@
     </section>
   
     <section>
-      <h2>1. HIPAA Compliance</h2>
+      <h5>1. HIPAA Compliance</h5>
       <p>
         Our platform is fully compliant with the Health Insurance Portability and Accountability Act (HIPAA).
         As a user, you are responsible for ensuring that you handle all Protected Health Information (PHI)
@@ -30,7 +30,7 @@
     </section>
   
     <section>
-      <h2>2. User Roles and Responsibilities</h2>
+      <h5>2. User Roles and Responsibilities</h5>
       <p>
         Our platform is limited to consumers of professional services, professionals in behavioral health, human services, organization administrators,
         and public health officials. It is your responsibility to ensure that only authorized users are granted access 
@@ -44,7 +44,7 @@
     </section>
   
     <section>
-      <h2>3. User Authentication</h2>
+      <h5>3. User Authentication</h5>
       <p>
         Our platform requires users to authenticate using a secure method, which may include multi-factor 
         authentication (MFA). You agree to maintain the confidentiality of your login credentials and 
@@ -57,7 +57,7 @@
     </section>
   
     <section>
-      <h2>4. Notifications</h2>
+      <h5>4. Notifications</h5>
       <p>
         Our platform provides notification services via SMS and email. You may opt-in or opt-out to receive such notifications 
         as part of the functionality of the platform. These notifications may include, but are not limited to, 
@@ -71,7 +71,7 @@
     </section>
   
     <section>
-      <h2>5. Restrictions on Use</h2>
+      <h5>5. Restrictions on Use</h5>
       <p>
         The use of our platform is strictly limited to consumers of professional services, behavioral health and human services professionals, 
         organization administrators, and public health officials. You agree not to use the platform for 
@@ -81,7 +81,7 @@
     </section>
   
     <section>
-      <h2>6. Data Privacy and Security</h2>
+      <h5>6. Data Privacy and Security</h5>
       <p>
         We take data privacy and security seriously and are committed to protecting your personal data and 
         the PHI you manage through our platform. We employ industry-standard security practices, including 
@@ -95,7 +95,7 @@
     </section>
   
     <section>
-      <h2>7. Limitation of Liability</h2>
+      <h5>7. Limitation of Liability</h5>
       <p>
         We are not responsible for any damages or losses resulting from your use of the platform, including 
         but not limited to errors, data breaches, or service interruptions. By using the platform, you accept 
@@ -105,7 +105,7 @@
     </section>
   
     <section>
-      <h2>8. Modifications to the Terms of Service</h2>
+      <h5>8. Modifications to the Terms of Service</h5>
       <p>
         We reserve the right to modify these terms of service at any time. Changes will be communicated through 
         the platform, and continued use of the platform after such modifications will be deemed acceptance of 
@@ -114,7 +114,7 @@
     </section>
   
     <section>
-      <h2>9. Contact Us</h2>
+      <h5>9. Contact Us</h5>
       <p>
         If you have any questions or concerns regarding these terms of service, please contact us at 
         info@combinebh.org or through the support section of the platform.
@@ -130,11 +130,12 @@
      
     }
   
-    h1, h2 {
+    h4, h5 {
       color: #333;
     }
   
     p {
+      font-size: 12px;
       line-height: 1.6;
       margin-bottom: 16px;
     }

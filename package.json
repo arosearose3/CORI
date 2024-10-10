@@ -19,6 +19,7 @@
 	"dependencies": {
 		"@casl/ability": "^6.7.1",
 		"axios": "^1.7.7",
+		"body-parser": "^1.20.3",
 		"casl": "^0.2.0",
 		"cookie-parser": "^1.4.6",
 		"cores": "^0.8.5",
@@ -26,14 +27,21 @@
 		"dotenv": "^16.4.5",
 		"express": "^4.19.2",
 		"express-session": "^1.18.0",
+		"form-data": "^4.0.0",
 		"fs": "^0.0.1-security",
 		"google-auth-library": "^9.14.1",
 		"googleapis": "^144.0.0",
 		"http-proxy-middleware": "^3.0.2",
 		"lucide-react": "^0.439.0",
+		"multer": "^1.4.5-lts.1",
+		"node-fetch": "^3.3.2",
+		"openai": "^4.67.3",
+		"os-utils": "^0.0.14",
 		"papaparse": "^5.4.1",
+		"path": "^0.12.7",
 		"stream": "^0.0.3",
 		"svelte-preprocess": "^6.0.2",
+		"util": "^0.12.5",
 		"ws": "^8.18.0"
 	}
 }

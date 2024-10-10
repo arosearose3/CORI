@@ -6,42 +6,51 @@ export const navItems = [
     icon: '⚙️',
     path: `${base}/clients/provider`,
     subject: 'Provider Clients',
-    roles: ['provider', 'admin'], // Accessible by provider and admin roles
+    roles: ['provider'], // Accessible by provider 
   },
   {
-    label: 'Clients',
+    label: 'Organization Clients',
     icon: '⚙️',
     path: `${base}/clients/orgadmin`,
     subject: 'Organization Clients',
-    roles: ['orgadmin', 'admin'], // Accessible by orgadmin and admin roles
+    roles: ['orgadmin'], // Accessible by orgadmin and admin roles
   },
   {
-    label: 'Cori Clients',
+    label: 'All Cori Clients',
     icon: '⚙️',
     path: `${base}/clients/admin`,
     subject: 'Cori Clients',
     roles: ['admin'], // Accessible only by admin
   },
   {
-    label: 'Staff',
+    label: 'Staff Availability',
     icon: '⚙️',
     path: `${base}/staff/orgadmin`,
     subject: 'Organization Staff',
     roles: ['orgadmin'], // Accessible by orgadmin and admin roles
   },
   {
-    label: 'Organization Settings',
+    label: 'Staff Information',
     icon: '⚙️',
-    path: `${base}/staff/orgadmin`,
-    subject: 'Organization Settings',
-    roles: ['orgadmin', 'admin'], // Accessible by orgadmin and admin roles
+    path: `${base}/org/stafflist`,
+    subject: 'Organization Staff List',
+    roles: ['orgadmin'], // Accessible by orgadmin and admin roles
   },
+
   {
     label: 'All Cori Staff',
     icon: '⚙️',
     path: `${base}/staff/admin`,
     subject: 'Cori Staff',
     roles: ['admin'], // Accessible only by admin
+  },
+  {
+    label: 'All Cori Organizations',
+    icon: '🛠️',
+    path: `${base}/admin/organizations`,
+    subject: 'Admin',
+    roles: ['admin'], // Accessible only by admin
+
   },
   {
     label: 'Settings',
@@ -54,7 +63,7 @@ export const navItems = [
   {
     label: 'Settings',
     icon: '⚙️',
-    path: `${base}/settings/org`,
+    path: `${base}/settings/orgadmin`,
     subject: 'Org Settings',
     roles: ['orgadmin'], // Accessible by multiple roles
 
@@ -113,13 +122,7 @@ export const navItems = [
     subject: 'Capacity',
     roles: ['provider', 'admin'], // Accessible by provider and admin roles
   },
-  {
-    label: 'Staff Capacity and Availability',
-    icon: '✉️',
-    path: `${base}/org/capacity`,
-    subject: 'Capacity',
-    roles: ['orgadmin'], // Accessible by provider and admin roles
-  },
+
   {
     label: 'Referrals',
     icon: '📄',
@@ -128,12 +131,5 @@ export const navItems = [
     roles: ['client', 'provider','org admin', 'admin'],
 
   },
-  {
-    label: 'All Cori Organizations',
-    icon: '🛠️',
-    path: `${base}/admin/organizations`,
-    subject: 'Admin',
-    roles: ['admin'], // Accessible only by admin
 
-  },
 ];

@@ -10,11 +10,14 @@
   let availabilityState = initialAvailability;
 
     // React to prop changes explicitly
-    $: if (initialAvailability) {
-         availabilityState = [...initialAvailability]; // Create a new reference for reactivity
- 
-    console.log("Updated availability received:", initialAvailability);
-    // Handle internal updates or re-render logic based on new availability data
+  // Reactive statement to watch for changes in initialAvailability
+  $: if (initialAvailability) {
+    console.log ("in Avail widget, initialAvailability is reacting:"+initialAvailability);
+    const currentInitialAvailability = JSON.stringify(initialAvailability);
+    if (currentInitialAvailability !== previousInitialAvailability) {
+      previousInitialAvailability = currentInitialAvailability;
+      initializeAvailabilities();
+    }
   }
 
   $: console.log("Updated availability in Availability component:", availabilityState);
@@ -96,31 +99,11 @@
       allDayAvailability.set(DAYS.reduce((acc, day) => ({ ...acc, [day]: false }), {}));
     }
   }
+
+
 onMount(() => {
     console.log("Component mounted. Initial availability:", JSON.stringify(initialAvailability));
-    if (initialAvailability && initialAvailability.length > 0) {
-      const newAvailabilities = [];
-      const newAllDayAvailability = { ...($allDayAvailability) };
-
-      console.log('Setting up initial availability:', initialAvailability);
-      initialAvailability.forEach(avail => {
-        if (avail.allDay) {
-          newAllDayAvailability[avail.daysOfWeek[0]] = true;
-        } else {
-          const startHour = parseTimeString(avail.availableStartTime);
-          const endHour = parseTimeString(avail.availableEndTime);
-          newAvailabilities.push({
-            id: crypto.randomUUID(),
-            day: avail.daysOfWeek[0],
-            start: startHour,
-            end: endHour
-          });
-        }
-      });
-
-      availabilities.set(newAvailabilities);
-      allDayAvailability.set(newAllDayAvailability);
-    }
+    initializeAvailabilities();
 
     // Setting up grid dimensions and event listeners...
     updateGridDimensions();

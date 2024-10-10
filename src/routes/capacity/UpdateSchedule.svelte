@@ -4,11 +4,13 @@
 
   import Pick4 from './Pick4.svelte';
   import Availability from './Availability.svelte';
+  import RecordButton from '../staff/orgadmin/RecordButton.svelte'; 
   import { base } from '$app/paths';
 
   // Component state variables
   let capacityData = null;
   let availabilityData = null;
+
   let practitionerName = '';
   let updateMessage = '';
   let errorMessage = '';
@@ -197,6 +199,29 @@
   function handleAvailabilityUpdate(event) {
     availabilityData = event.detail;
   }
+
+  let availabilityKey = 0;
+
+  $: availabilityComponent = {
+  key: availabilityKey,
+  data: availabilityData
+};
+
+function handleAvailabilityProcessed(event) {
+  const newAvailabilityData = event.detail.structuredAvailability;
+
+  console.log("updatesched newAvailData:", JSON.stringify(newAvailabilityData));
+  console.log("updatesched AvailData:", JSON.stringify(availabilityData));
+  
+  const newAvailableTimeArray = newAvailabilityData.availableTime;
+
+  if (Array.isArray(newAvailableTimeArray) && JSON.stringify(newAvailableTimeArray) !== JSON.stringify(availabilityData)) {
+    availabilityData = [...newAvailableTimeArray];
+    // Change the key to force re-rendering of the Availability component
+    availabilityKey += 1;
+  }
+}
+
 </script>
 
 <div>
@@ -210,8 +235,15 @@
 
   {#if isDataReady}
     <Pick4 on:capacitychange={handleCapacityChange} capacity={capacityData} />
-    <br><hr /><br>
-    <Availability initialAvailability={availabilityData} on:availabilityUpdate={handleAvailabilityUpdate} />
+    <br><hr />
+    <RecordButton on:availabilityProcessed={handleAvailabilityProcessed} />
+    <br>
+    {#key availabilityComponent.key}
+    <Availability 
+      initialAvailability={availabilityComponent.data} 
+      on:availabilityUpdate={handleAvailabilityUpdate} 
+    />
+    {/key}
   {:else}
     <p>Loading...</p>
   {/if}
