@@ -19,6 +19,7 @@
   import Navigation from './Navigation.svelte';
   import UserProfile from "./UserProfile2.svelte";
   import HomepageText from './HomepageText.svelte';
+  import RoleSelection from './RoleSelection.svelte';
   import { afterNavigate } from '$app/navigation';
   import { page } from '$app/stores';
   import { base } from '$app/paths';
@@ -38,9 +39,12 @@
   let organizations = []; // List of organizations extracted from PractitionerRoles
   let fetchError = null;
   let isInitializing = true;
+
   let isFetchingPractitioner = false;
+  let hasFetchedPractitioner = false;
   let showRoleSelection = false; // Controls the visibility of the role selection UI
   let currentOrgName = '';
+  let seenOrgRefs = new Set();
   let localOrgArray = [];
 
   console.log('Base path +layout:', base, ":");
@@ -58,6 +62,7 @@
   }
 
   $: {
+    console.log (".id tracker 2");
   isUserAuthenticated = !!userData?.id;
   console.log('+layout/isUserAuthenticated updated:', isUserAuthenticated);
   
@@ -79,23 +84,25 @@
     isUserAuthenticated = !!userData?.id;
 
     if (isUserAuthenticated && value?.practitioner) {
-      practitionerId = value.practitioner.id;
+      practitionerId = value.practitioner.Pid;
       practitionerName = value.practitioner.name;
       userRoles = value.practitioner.roles || [];
       console.log("+layout: Updated userRoles:", userRoles);
     }
 
-    if (isUserAuthenticated && userData?.email && !hasFetchedPractitionerData()) {
+    if (isUserAuthenticated && userData?.email && !hasFetchedPractitioner) {
       console.log("+layout user.subscribe YES authenticated");
       isFetchingPractitioner = true;
       await fetchPractitionerData(userData.email);
       isFetchingPractitioner = false;
+      hasFetchedPractitioner = true;
     } 
     if (!isUserAuthenticated) {
       console.log("+layout user.subscribe NO not authenticated");
       resetPractitionerData();
       abilities.set(new Ability([]));
       isFhirAuthenticated = false;
+      hasFetchedPractitioner = false;
     }
   });
 
@@ -115,6 +122,16 @@
     console.log('Base path in layout/onMount:', base);
     isInitializing = true;
     await checkUserAuthStatus(base);
+    if (isUserAuthenticated && userData?.email && !hasFetchedPractitionerData()) {
+      await fetchPractitionerData(userData.email);
+      console.log (".id tracker 6");
+      if (userData?.practitioner?.Pid) {  // Add this check
+          await fetchPractitionerRoles(userData.practitioner.Pid);
+        } else {
+          console.error("Practitioner data is missing or invalid.");
+         // return; //avoid canceling out the isInitializing
+        }
+  }
     isInitializing = false;
   });
 
@@ -136,6 +153,7 @@
     localOrgArray = [];
     console.log("+layout resetPractitionerData: userRoles preserved:", userRoles);
   }
+
 
   // Function to handle user login
   async function handleLogin() {
@@ -217,7 +235,6 @@
     return `${givenNames} ${familyName}`.trim();
   }
 
-  // Function to fetch practitioner data by email
   async function fetchPractitionerData(email) {
     if (hasFetchedPractitionerData()) {
       console.log("Practitioner data already fetched, skipping fetch");
@@ -244,7 +261,7 @@
             ...store,
             practitioner: {
               ...store.practitioner,
-              id: practitionerId,
+              Pid: practitionerId,
               name: practitionerName,
               roles: userRoles
             }
@@ -268,136 +285,120 @@
       fetchError = 'Unable to retrieve practitioner information. Please try again later.';
     }
   }
-
   // Function to fetch PractitionerRoles by practitioner ID
   async function fetchPractitionerRoles(practitionerId) {
-    try {
-      const response = await fetch(`${base}/api/role/PractitionerRole?practitioner=${encodeURIComponent(practitionerId)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
+  try {
+    const response = await fetch(`${base}/api/role/PractitionerRole?practitioner=${encodeURIComponent(practitionerId)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
 
-      if (response.ok) {
-        const bundle = await response.json();
-        const entries = Array.isArray(bundle.entry) ? bundle.entry : [];
+    if (response.ok) {
+      const bundle = await response.json();
+      const entries = Array.isArray(bundle.entry) ? bundle.entry : [];
 
-        practitionerRoles = entries
-          .map(entry => entry.resource)
-          .filter(resource => resource.resourceType === 'PractitionerRole')
-          .filter(role => {
-            const hasValidCode = role.code && Array.isArray(role.code) && role.code.some(c => 
-              c.coding && Array.isArray(c.coding) && c.coding.some(coding => 
-                coding.system === 'https://combinebh.org/cori-value-set/' && coding.code
-              )
-            );
-            if (!hasValidCode) {
-              console.log(`Filtered out PractitionerRole without valid code:`, role);
-            }
-            return hasValidCode;
-          });
+      practitionerRoles = entries
+        .map(entry => entry.resource)
+        .filter(resource => resource.resourceType === 'PractitionerRole');
 
-        console.log(`Filtered practitionerRoles:`, practitionerRoles);
+      console.log('Filtered PractitionerRoles:', practitionerRoles);
 
-        const uniqueOrgRefs = new Set();
-        localOrgArray = [];
+      const seenOrgRefs = new Set();
+      const  tempLocalOrgArray = [];
 
-        for (const role of practitionerRoles) {
-          if (role.organization && role.organization.reference) {
-            const orgRef = role.organization.reference;
-            if (!uniqueOrgRefs.has(orgRef)) {
-              uniqueOrgRefs.add(orgRef);
-              let orgName = await getOrganizationName(orgRef);
-              localOrgArray.push({ name: orgName, id: orgRef });
-            }
-          }
+      // Use Promise.all to wait for all asynchronous operations to complete
+      await Promise.all(practitionerRoles.map(async (role) => {
+      if (role.organization && role.organization.reference) {
+        const orgRef = role.organization.reference;
+        if (!seenOrgRefs.has(orgRef)) {
+          seenOrgRefs.add(orgRef);
+          let orgName = await getOrganizationName(orgRef);
+          tempLocalOrgArray.push({ name: orgName, id: orgRef });
         }
-
-        if (practitionerRoles.length > 0) {
-          // Update userRoles based on the first PractitionerRole
-          const firstRole = practitionerRoles[0];
-          userRoles = (firstRole.code || [])
-            .flatMap(c =>
-              (c.coding || [])
-                .filter(code => code.system === 'https://combinebh.org/cori-value-set/')
-                .map(code => code.code)
-            )
-            .filter(code => code);
-          
-          console.log("+layout fetchPractitionerRoles: Updated userRoles:", userRoles);
-
-          // Update the user store
-          user.update(store => ({
-            ...store,
-            practitioner: {
-              ...store.practitioner,
-              practitionerRoles,
-              localOrgArray,
-              roles: userRoles
-            }
-          }));
-
-          updateAbilities(userRoles);
-        }
-
-        console.log("+layout/fetchPR localOrgArray:" + JSON.stringify(localOrgArray));
-        console.log("+layout/fetchPR pract[0]:" + JSON.stringify(practitionerRoles[0]));
-
-        if (practitionerRoles.length > 1) {
-          showRoleSelection = true;
-        } else if (practitionerRoles.length === 1) {
-          console.log("+layout/fetchPR only one Pract");
-          selectPractitionerRole(localOrgArray[0].id, localOrgArray[0].name);
-        } else {
-          console.error('No valid PractitionerRole resources found.');
-          fetchError = 'No valid roles found for the practitioner.';
-        }
-      } else {
-        throw new Error('Failed to fetch practitioner roles');
-      }
-    } catch (error) {
-      console.error('Error fetching practitioner roles:', error);
-      fetchError = 'Unable to retrieve practitioner roles. Please try again later.';
-    }
-  }
-
-  // Function to select a PractitionerRole
-  function selectPractitionerRole(prId, orgNameVar) {
-    currentOrgName = orgNameVar;
-    console.log("+layout/selectPR prId:" + JSON.stringify(prId));
-    console.log("+layout/selectPR practitionerRoles:" + JSON.stringify(practitionerRoles));
-
-    selectedPractitionerRole = practitionerRoles.find(role => role.organization.reference === prId);
-    console.log("+layout/selectPR selectedPractitionerRole:" + JSON.stringify(selectedPractitionerRole));
-
-    userRoles = (selectedPractitionerRole.code || [])
-      .flatMap(c =>
-        (c.coding || [])
-          .filter(code => code.system === 'https://combinebh.org/cori-value-set/')
-          .map(code => code.code)
-      )
-      .filter(code => code);
-
-    console.log("+layout selectPractitionerRole: Updated userRoles:", userRoles);
-
-    user.update(store => ({
-      ...store,
-      practitioner: {
-        ...store.practitioner,
-        organizationId: selectedPractitionerRole.organization?.reference?.split('/')[1],
-        organizationName: selectedPractitionerRole.organization?.name || 'Organization',
-        availability: selectedPractitionerRole.availability,
-        PractitionerRoleId: selectedPractitionerRole.id,
-        roles: userRoles
       }
     }));
 
-    updateAbilities(userRoles);
-    showRoleSelection = false;
+    // After all async operations, deduplicate based on id
+    console.log (".id tracker 8");
+    localOrgArray = Array.from(new Map(tempLocalOrgArray.map(item => [item.id, item])).values());
+
+
+      console.log('Populated localOrgArray:', localOrgArray);
+
+      user.update(store => ({
+        ...store,
+        practitioner: {
+          ...store.practitioner,
+          practitionerRoles,
+          localOrgArray
+        }
+      }));
+
+      console.log('Updated user store with PractitionerRoles');
+      console.log('fetchPR localOrglength' + localOrgArray.length);
+
+      // Now check the length of localOrgArray after it has been fully populated
+      if (localOrgArray.length > 1) {
+        showRoleSelection = true;
+        console.log('Showing role selection');
+      } else if (localOrgArray.length === 1) {
+        console.log("+layout/fetchPR only one Pract");
+        selectPractitionerRole(practitionerRoles[0], localOrgArray[0].name);
+      } else {
+        console.error('No valid PractitionerRole resources found.');
+        fetchError = 'No valid roles found for the practitioner.';
+      }
+    } else {
+      throw new Error('Failed to fetch practitioner roles');
+    }
+  } catch (error) {
+    console.error('Error fetching practitioner roles:', error);
+    fetchError = 'Unable to retrieve practitioner roles. Please try again later.';
   }
+}
+
+  // Function to select a PractitionerRole
+  function selectPractitionerRole(selectedRole, orgName) {
+  console.log('Selecting role:', selectedRole, 'for organization:', orgName);
+
+  if (!selectedRole || typeof selectedRole !== 'object') {
+    console.error('Invalid role selected:', selectedRole);
+    return;
+  }
+
+  const userRoles = (selectedRole.code || [])
+    .flatMap(c =>
+      (c.coding || [])
+        .filter(code => code.system === 'https://combinebh.org/cori-value-set/')
+        .map(code => code.code)
+    )
+    .filter(code => code);
+
+  const organizationReference = selectedRole.organization?.reference;
+  const organizationId = organizationReference ? organizationReference.split('/')[1] : null;
+
+  console.log("+layout selectPractitionerRole: Updated userRoles:", userRoles);
+
+  console.log (".id tracker 1");
+  user.update(store => ({
+    ...store,
+    practitioner: {
+      ...store.practitioner,
+      organizationId: organizationId,
+      organizationName: orgName || 'Unknown Organization',
+      PRid: selectedRole.id || 'unknown',
+      roles: userRoles
+    }
+  }));
+
+  updateAbilities(userRoles);
+  showRoleSelection = false;
+}
 </script>
+
 
 <div class="app-container">
   <aside class="sidebar">
@@ -413,18 +414,18 @@
     </div>
 
     <Navigation
-      isUserAuthenticated={isUserAuthenticated}
-      practitionerId={practitionerId}
-      practitionerName={practitionerName}
-      practitionerRoles={practitionerRoles}
-      organizations={organizations}
-      selectPractitionerRole={selectPractitionerRole}
-      handleLogin={handleLogin}
-      handleLogout={handleLogout}
-      handleConnectFhir={handleConnectFhir}
-      handleDisconnectFhir={handleDisconnectFhir}
-      isFhirAuthenticated={isFhirAuthenticated}
-      fhirError={fhirError}
+      {isUserAuthenticated}
+      {practitionerId}
+      {practitionerName}
+      {practitionerRoles}
+      {organizations}
+      {selectPractitionerRole}
+      {handleLogin}
+      {handleLogout}
+      {handleConnectFhir}
+      {handleDisconnectFhir}
+      {isFhirAuthenticated}
+      {fhirError}
     />
 
     <!-- Authentication Buttons -->
@@ -444,54 +445,35 @@
   </aside>
 
   <main class="main-content">
-
     {#if isInitializing}
-  <!--     <p>Initializing application, please wait...</p> -->
+      <p>Initializing application, please wait...</p>
     {:else if isFetchingPractitioner}
       <p>Loading your data, please wait...</p>
     {:else if fetchError}
       <div class="error-message">{fetchError}</div>
-    {/if}
+    {:else if showRoleSelection}
 
-    <!-- Display role selection UI if multiple PractitionerRoles are available -->
-    {#if showRoleSelection && practitionerRoles}
-      <div class="role-selection">
-   <!--      <h2>All PractitionerRoles</h2>
-        <pre>{JSON.stringify(practitionerRoles, null, 2)}</pre> -->
+      {console.log('About to render RoleSelection')}
+      {console.log('localOrgArray:', $user.practitioner?.localOrgArray)}
+      {console.log('practitionerRoles:', $user.practitioner?.practitionerRoles)}
+      <RoleSelection 
+        onSelectRole={selectPractitionerRole}
+        localOrgArray={$user.practitioner?.localOrgArray || []}
+        practitionerRoles={$user.practitioner?.practitionerRoles || []}
+      />
+      {console.log('RoleSelection rendered')}
+     
+    {:else}
+      {#if selectedPractitionerRole}
+        <div class="user-info">
+          <UserProfile {userData} {currentOrgName} />
+        </div>
+      {/if}
 
-        <h3>Choose an Organization</h3>
-        <ul>
-          {#each localOrgArray as org}
-            <li>
-              <button on:click={() => selectPractitionerRole(org.id, org.name)}>
-                {org.name || 'Unknown Organization'}
-              </button>
-            </li>
-          {/each}
-        </ul>
-      </div>
-    {/if}
-
-    <!-- Display selected roles if a PractitionerRole is chosen -->
-    {#if selectedPractitionerRole}
-      <div class="user-info">
-        <UserProfile {userData} {currentOrgName} />
-      </div>
-
-<!--       <div class="role-info">
-        <p>
-          Roles at {currentOrgName}:
-          {#each userRoles as role, index}
-            <span>{role}{#if index < userRoles.length - 1},{'\u00A0'}{/if}</span>
-          {/each}
-        </p>
-      </div>
-      <hr> -->
-    {/if}
-
-    <slot></slot>
-    {#if isHomePage}
-      <HomepageText />
+      <slot></slot>
+      {#if isHomePage}
+        <HomepageText />
+      {/if}
     {/if}
   </main>
 </div>
@@ -508,16 +490,17 @@
   }
 
   .sidebar {
-    position: relative;
-    padding: 10px;
-    background-color: #f8f9fa;
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid #ddd;
-    height: 100vh;
-    padding-bottom: 20px;
-    padding-right: 10px;
-  }
+  position: relative;
+  padding: 10px;
+  background-color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #ddd;
+  height: 100vh;
+  padding-bottom: 20px;
+  padding-right: 10px;
+  overflow-y: auto; /* Add vertical scroll when content exceeds height */
+}
 
   .sidebar-logo-container {
     display: flex;

@@ -14,12 +14,13 @@ const initialUserState = {
     picture: null,
   },
   practitioner: {
-    id: null,
+    PRid: null, // this is the PractionerRoleId
+    Pid: null,  // this is the id of the Practitioner Resource
     name: null,
     organizationId: null,
     organizationName: null,
     availability: null,
-    PractitionerRoleId: null,
+    
     sms: null,
     dob: null,
     npi: null,
@@ -73,14 +74,14 @@ export function updateAbilities(userRoles) {
       item.roles.forEach(role => {
         if (userRoles.includes(role)) {
           can('view', item.subject);
-          console.log(`Role '${role}' can view '${item.subject}'`);
+         // console.log(`Role '${role}' can view '${item.subject}'`);
         }
 
         if (item.subItems) {
           item.subItems.forEach(subItem => {
             if (userRoles.includes(role)) {
               can('view', subItem.subject);
-              console.log(`Role '${role}' can view '${subItem.subject}'`);
+        //      console.log(`Role '${role}' can view '${subItem.subject}'`);
             }
           });
         }
@@ -156,7 +157,7 @@ export const actions = {
 export function hasFetchedPractitionerData() {
   let fetchedData = false;
   user.subscribe(store => {
-    fetchedData = store.practitioner.id !== null;
+    fetchedData = store.practitioner.Pid !== null;
   })();
   return fetchedData;
 }

@@ -68,7 +68,7 @@
             ...store,
             practitioner: {
               ...store.practitioner,
-              PractitionerRoleId: practitionerRole.id,
+              PRid: practitionerRole.id,
               capacity: capacityData,
               availability: availabilityData,
               roles: store.practitioner.roles // Explicitly preserve roles

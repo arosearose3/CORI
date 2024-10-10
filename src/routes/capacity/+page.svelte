@@ -12,9 +12,9 @@
 
   // Function to set practitioner data once it is available
   function setPractitionerData(value) {
-    if (value && value.practitioner && value.practitioner.id) {
-      practitionerId = value.practitioner.id;
-      currentPractitionerRoleId = value.practitioner.PractitionerRoleId;
+    if (value && value.practitioner && value.practitioner.Pid) {
+      practitionerId = value.practitioner.Pid;
+      currentPractitionerRoleId = value.practitioner.PRId;
       isLoading = false;
       console.log('capacity/+page Practitioner data loaded:', value.practitioner);
     } else {

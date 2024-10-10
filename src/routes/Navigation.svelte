@@ -11,14 +11,15 @@
   export let isFhirAuthenticated;
   export let fhirError;
 
-  // Reactive subscriptions to stores
-  $: userData = $user;
-  $: ability = $abilities;
 
-  // Ensure userRoles is always an array
-  $: userRoles = userData?.practitioner?.roles ?? [];
 
   // Determine if user has only one role
+ // $: hasSingleRole = userRoles.length === 1;
+
+  $: userData = $user;
+  $: ability = $abilities;
+  $: userRoles = userData?.practitioner?.roles ?? [];
+  $: isPractitionerRoleSelected = !!userData?.practitioner?.PRid;
   $: hasSingleRole = userRoles.length === 1;
 
   // Initialize the expanded/collapsed state for each role to false (collapsed by default)
@@ -51,7 +52,7 @@
 
 <nav class="navigation">
   <!-- Ensure conditions are met to trigger the each block -->
-  {#if userRoles.length > 0 }
+  {#if userRoles.length > 0 && ability.rules.length > 0}
     {#if hasSingleRole}
       <!-- Display nav items directly for single role -->
       <div class="nav-links single-role">
