@@ -22,6 +22,7 @@ import goalRoutes from './routes/goalRoutes.js';
 import provenanceRoutes from './routes/provenanceRoutes.js';
 import serviceRequestRoutes from './routes/serviceRequestRoutes.js';
 import taskRoutes from './routes/taskRoutes.js';
+import exclusionRoutes from './routes/exclusionRoutes.js';
 
 import { BASE_PATH } from './serverutils.js'; // Adjust the path as necessary
 
@@ -238,6 +239,7 @@ app.use(`${BASE_PATH}/api/provenance`, provenanceRoutes);
 app.use(`${BASE_PATH}/api/task`, taskRoutes);
 app.use(`${BASE_PATH}/api/servicerequest`, serviceRequestRoutes);
 app.use(`${BASE_PATH}/api/serverstats`, serviceRequestRoutes);
+app.use(`${BASE_PATH}/api/exclusion`, exclusionRoutes);
 
 
 

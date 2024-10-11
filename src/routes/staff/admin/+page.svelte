@@ -4,6 +4,7 @@
     import AddPractitioner from "./AddPractitioner.svelte";
     import IngestPractitioners from "./IngestPractitioners.svelte";
     import AllPractitionersBig from "./AllPractitionersBig.svelte";
+  //  import UploadCombine from "./UploadCombine.svelte";
 
 </script>
 
@@ -11,6 +12,8 @@
 
 
 <div class="practitioner-container">
+<UploadCombine />
+
 <IngestCoriRoster />
 <hr>
 <AllPractitioners />

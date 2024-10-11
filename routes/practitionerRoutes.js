@@ -243,5 +243,49 @@ router.get('/:practitionerId', async (req, res) => {
   }
 });
 
+router.delete('/removeUnknown', async (req, res) => {
+  try {
+    // Get the OAuth2 access token
+    const accessToken = await getFhirAccessToken();
+
+    // Construct the search URL for Practitioners with name "unknown"
+    const searchUrl = `${FHIR_BASE_URL}/Practitioner?name=unknown`;
+
+    // Make the GET request to search for unknown Practitioners
+    const searchResponse = await axios.get(searchUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/fhir+json',
+      },
+    });
+
+    const practitioners = searchResponse.data.entry || [];
+
+    if (practitioners.length === 0) {
+      return res.status(200).json({ message: 'No Practitioners with name "unknown" found.' });
+    }
+
+    // Delete each found Practitioner
+    const deletionPromises = practitioners.map(practitioner => 
+      axios.delete(`${FHIR_BASE_URL}/Practitioner/${practitioner.resource.id}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/fhir+json',
+        },
+      })
+    );
+
+    await Promise.all(deletionPromises);
+
+    res.status(200).json({
+      message: `Successfully deleted ${practitioners.length} Practitioner(s) with name "unknown".`,
+      deletedCount: practitioners.length
+    });
+  } catch (error) {
+    console.error('Error in removeUnknown:', error.message);
+    res.status(500).json({ error: 'An error occurred while removing unknown Practitioners.', details: error.message });
+  }
+});
+
 
 export default router;

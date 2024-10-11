@@ -5,6 +5,9 @@ import { navItems } from '$lib/navConfig.js';
 // Initialize PureAbility with an empty rule set
 const initialAbilities = new PureAbility([]);
 
+export const exc_uploadStatus = writable(''); //used in ExclusionCheck
+export const exc_checkResults = writable([]);
+
 // Initial state for user and practitioner
 const initialUserState = {
   user: {

@@ -1,10 +1,10 @@
 <script>
    import OrgPractitioners from './OrgPractitioners.svelte';
-   import ExclusionCheck from 
+   import Exclusion from './Exclusion.svelte';
 </script>
 <h5>Staff Capacity and Availability</h5>
-<OrgPractitioners />
+<OrgPractitioners /> 
 
-<ExclusionCheck />
+<!-- <Exclusion /> -->
 
 

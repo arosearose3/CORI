@@ -1,16 +1,26 @@
-const express = require('express');
-const multer = require('multer');
-const csv = require('csv-parser');
-const xlsx = require('xlsx');
-const fs = require('fs');
-const nodemailer = require('nodemailer');
-const cors = require('cors');
+import express from 'express';
 
-const app = express();
+import dotenv from 'dotenv';
+import fs from 'fs';
+import nodemailer from 'nodemailer';
+import xlsx from 'xlsx';
+import multer from 'multer';
+
+
+// Load environment variables
+dotenv.config();
+
+import { BASE_PATH } from '../serverutils.js'; // Adjust the path as necessary
+
+const base = BASE_PATH;
+const router = express.Router();
+
+
+
+
+
 const upload = multer({ dest: 'uploads/' });
 
-app.use(cors());
-app.use(express.json());
 
 // In-memory storage
 let staffData = [];
@@ -37,7 +47,7 @@ const parseXLSX = (file) => {
 };
 
 // Endpoints
-app.post('/api/upload', upload.fields([
+router.post('/upload', upload.fields([
   { name: 'staff', maxCount: 1 },
   { name: 'sam', maxCount: 1 },
   { name: 'oig', maxCount: 1 },
@@ -54,7 +64,7 @@ app.post('/api/upload', upload.fields([
   }
 });
 
-app.post('/api/check', (req, res) => {
+router.post('/check', (req, res) => {
   const results = staffData.map(staff => {
     const [firstName, lastName] = staff[0].split(' ');
     const npi = staff[3];
@@ -85,17 +95,19 @@ app.post('/api/check', (req, res) => {
   res.json(results);
 });
 
-app.post('/api/email', async (req, res) => {
+router.post('/email', async (req, res) => {
   const { to, subject, html } = req.body;
 
   const transporter = nodemailer.createTransport({
-    // Configure your email service here
-    service: 'gmail',
+    host: 'email7412.luxsci.com',
+    port: 587,
+    secure: false, // Use TLS
     auth: {
-      user: 'your-email@gmail.com',
-      pass: 'your-password'
+      user: 'andrewroselpc@elig.pro',
+      pass: process.env.LUXSCIPW
     }
   });
+  
 
   try {
     await transporter.sendMail({ to, subject, html });
@@ -104,4 +116,6 @@ app.post('/api/email', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+export default router;
 
