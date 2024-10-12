@@ -1,4 +1,4 @@
-<!-- StaffList.svelte -->
+
 <script>
     import StaffList from './StaffList2.svelte'; // Assuming you have a StaffList component
     import AddStaff from './AddOneStaff.svelte'; // Assuming you have an AddStaff component

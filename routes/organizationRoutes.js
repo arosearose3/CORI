@@ -152,27 +152,44 @@ router.get('/:organizationId', async (req, res) => {
   if (!auth) {
     return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
   }
-
   const { organizationId } = req.params;
-
   if (!organizationId) {
     return res.status(400).json({ error: 'Organization ID is required.' });
   }
-
    console.log ("org/getone orgid:"+organizationId);
   try {
-   // const parent = `projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}`;
-   // const organizationUrl = `${parent}/fhir/Organization/${organizationId}`;
-
     const accessToken = await getFhirAccessToken();
     const searchUrl = `${FHIR_BASE_URL}/Organization/${organizationId}`;
 
+    const organizationResponse = await axios.get(searchUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`, // Use the getAccessToken function
+        Accept: 'application/fhir+json', // Ensure the request is FHIR-compliant
+      },
+    });
 
-    // Fetch Organization details
- /*    const organizationResponse = await healthcare.projects.locations.datasets.fhirStores.fhir.read({
-      name: organizationUrl,
-      auth: auth,
-    }); */
+    const organization = await handleBlobResponse(organizationResponse.data);
+    res.json(organization);
+  } catch (error) {
+    console.error('Error fetching Organization:', error);
+    res.status(500).json({ error: 'Failed to fetch Organization', details: error.message });
+  }
+});
+
+
+//get one Organization  
+router.delete('/:organizationId', async (req, res) => {
+  if (!auth) {
+    return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
+  }
+  const { organizationId } = req.params;
+  if (!organizationId) {
+    return res.status(400).json({ error: 'Organization ID is required.' });
+  }
+   console.log ("org/delete orgid:"+organizationId);
+  try {
+    const accessToken = await getFhirAccessToken();
+    const searchUrl = `${FHIR_BASE_URL}/Organization/${organizationId}`;
 
     const organizationResponse = await axios.get(searchUrl, {
       headers: {

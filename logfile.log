@@ -37,3 +37,235 @@ user-18+ 1423566  0.4  1.7 33114016 137640 pts/1 Sl+  23:28   0:02 node cori
 user-18+ 1423566  0.2  1.7 33114016 137640 pts/1 Sl+  23:28   0:02 node cori
 2024-10-11 23:42:10 - cori is already running.
 2024-10-11 23:42:10 - === Script execution finished ===
+2024-10-11 23:47:10 - === Starting script to check if cori is running ===
+2024-10-11 23:47:10 - Current processes matching keyword 'cori':
+user-18+ 1423566  0.2  0.9 33114016 73020 pts/1  Sl+  23:28   0:02 node cori
+2024-10-11 23:47:10 - cori is already running.
+2024-10-11 23:47:10 - === Script execution finished ===
+2024-10-11 23:52:10 - === Starting script to check if cori is running ===
+2024-10-11 23:52:10 - Current processes matching keyword 'cori':
+user-18+ 1423566  0.2  1.3 33138672 109280 pts/1 Sl+  23:28   0:04 node cori
+2024-10-11 23:52:10 - cori is already running.
+2024-10-11 23:52:10 - === Script execution finished ===
+2024-10-11 23:57:10 - === Starting script to check if cori is running ===
+2024-10-11 23:57:10 - Current processes matching keyword 'cori':
+user-18+ 1423566  0.2  1.3 33138672 109280 pts/1 Sl+  23:28   0:04 node cori
+2024-10-11 23:57:10 - cori is already running.
+2024-10-11 23:57:10 - === Script execution finished ===
+2024-10-12 00:02:10 - === Starting script to check if cori is running ===
+2024-10-12 00:02:10 - Current processes matching keyword 'cori':
+user-18+ 1423566  0.2  1.3 33138672 107460 pts/1 Sl+  Oct11   0:04 node cori
+2024-10-12 00:02:10 - cori is already running.
+2024-10-12 00:02:10 - === Script execution finished ===
+2024-10-12 00:07:10 - === Starting script to check if cori is running ===
+2024-10-12 00:07:10 - Current processes matching keyword 'cori':
+user-18+ 1423566  0.1  1.3 33138672 105632 pts/1 Sl+  Oct11   0:04 node cori
+2024-10-12 00:07:11 - cori is already running.
+2024-10-12 00:07:11 - === Script execution finished ===
+2024-10-12 00:12:11 - === Starting script to check if cori is running ===
+2024-10-12 00:12:11 - Current processes matching keyword 'cori':
+user-18+ 1423566  0.1  1.3 33138672 107820 pts/1 Sl+  Oct11   0:04 node cori
+2024-10-12 00:12:11 - cori is already running.
+2024-10-12 00:12:11 - === Script execution finished ===
+2024-10-12 00:17:11 - === Starting script to check if cori is running ===
+2024-10-12 00:17:11 - Current processes matching keyword 'cori':
+user-18+ 1423566  0.1  1.3 33138672 108084 pts/1 Sl+  Oct11   0:04 node cori
+2024-10-12 00:17:11 - cori is already running.
+2024-10-12 00:17:11 - === Script execution finished ===
+2024-10-12 00:22:11 - === Starting script to check if cori is running ===
+2024-10-12 00:22:11 - Current processes matching keyword 'cori':
+user-18+ 1423566  0.1  1.3 33138672 105888 pts/1 Sl+  Oct11   0:04 node cori
+2024-10-12 00:22:11 - cori is already running.
+2024-10-12 00:22:11 - === Script execution finished ===
+2024-10-12 00:27:11 - === Starting script to check if cori is running ===
+2024-10-12 00:27:11 - Current processes matching keyword 'cori':
+user-18+ 1423566  0.1  1.3 33138672 106764 pts/1 Sl+  Oct11   0:04 node cori
+2024-10-12 00:27:11 - cori is already running.
+2024-10-12 00:27:11 - === Script execution finished ===
+2024-10-12 00:32:11 - === Starting script to check if cori is running ===
+2024-10-12 00:32:11 - Current processes matching keyword 'cori':
+user-18+ 1423566  0.1  1.3 33138672 106520 pts/1 Sl+  Oct11   0:04 node cori
+2024-10-12 00:32:11 - cori is already running.
+2024-10-12 00:32:11 - === Script execution finished ===
+2024-10-12 00:37:11 - === Starting script to check if cori is running ===
+2024-10-12 00:37:11 - Current processes matching keyword 'cori':
+user-18+ 1423566  0.1  1.3 33138672 109076 pts/1 Sl+  Oct11   0:04 node cori
+2024-10-12 00:37:11 - cori is already running.
+2024-10-12 00:37:11 - === Script execution finished ===
+2024-10-12 00:42:11 - === Starting script to check if cori is running ===
+2024-10-12 00:42:11 - Current processes matching keyword 'cori':
+user-18+ 1453090  6.7  1.8 33040652 145056 pts/1 Sl+  00:41   0:01 node cori
+2024-10-12 00:42:11 - cori is already running.
+2024-10-12 00:42:11 - === Script execution finished ===
+2024-10-12 00:47:11 - === Starting script to check if cori is running ===
+2024-10-12 00:47:11 - Current processes matching keyword 'cori':
+user-18+ 1454728  1.7  1.8 32836004 143296 pts/1 Sl+  00:45   0:01 node cori
+2024-10-12 00:47:11 - cori is already running.
+2024-10-12 00:47:11 - === Script execution finished ===
+2024-10-12 00:52:11 - === Starting script to check if cori is running ===
+2024-10-12 00:52:11 - Current processes matching keyword 'cori':
+2024-10-12 00:52:11 - cori is not running.
+2024-10-12 00:52:11 - Starting cori with command: node ./cori.js
+2024-10-12 00:52:11 - cori started.
+2024-10-12 00:52:11 - === Script execution finished ===
+2024-10-12 00:57:11 - === Starting script to check if cori is running ===
+2024-10-12 00:57:11 - Current processes matching keyword 'cori':
+user-18+ 1458011  1.4  1.8 32975128 144252 pts/1 Sl+  00:54   0:02 node cori
+2024-10-12 00:57:11 - cori is already running.
+2024-10-12 00:57:11 - === Script execution finished ===
+2024-10-12 01:02:11 - === Starting script to check if cori is running ===
+2024-10-12 01:02:11 - Current processes matching keyword 'cori':
+user-18+ 1458011  0.4  1.8 32975128 144252 pts/1 Sl+  00:54   0:02 node cori
+2024-10-12 01:02:11 - cori is already running.
+2024-10-12 01:02:11 - === Script execution finished ===
+2024-10-12 01:07:11 - === Starting script to check if cori is running ===
+2024-10-12 01:07:11 - Current processes matching keyword 'cori':
+2024-10-12 01:07:11 - cori is not running.
+2024-10-12 01:07:11 - Starting cori with command: node ./cori.js
+2024-10-12 01:07:11 - cori started.
+2024-10-12 01:07:11 - === Script execution finished ===
+2024-10-12 01:12:11 - === Starting script to check if cori is running ===
+2024-10-12 01:12:11 - Current processes matching keyword 'cori':
+user-18+ 1463821  9.2  1.8 32870120 147940 pts/1 Sl+  01:11   0:01 node cori
+2024-10-12 01:12:11 - cori is already running.
+2024-10-12 01:12:11 - === Script execution finished ===
+2024-10-12 01:17:11 - === Starting script to check if cori is running ===
+2024-10-12 01:17:11 - Current processes matching keyword 'cori':
+user-18+ 1466604  3.6  1.9 33047456 153816 pts/1 Sl+  01:16   0:02 node cori
+2024-10-12 01:17:11 - cori is already running.
+2024-10-12 01:17:11 - === Script execution finished ===
+2024-10-12 01:22:11 - === Starting script to check if cori is running ===
+2024-10-12 01:22:11 - Current processes matching keyword 'cori':
+user-18+ 1466604  1.8  2.3 33080224 187052 pts/1 Sl+  01:16   0:06 node cori
+2024-10-12 01:22:11 - cori is already running.
+2024-10-12 01:22:11 - === Script execution finished ===
+2024-10-12 01:27:11 - === Starting script to check if cori is running ===
+2024-10-12 01:27:11 - Current processes matching keyword 'cori':
+user-18+ 1466604  1.0  1.9 33043884 149924 pts/1 Sl+  01:16   0:06 node cori
+2024-10-12 01:27:11 - cori is already running.
+2024-10-12 01:27:11 - === Script execution finished ===
+2024-10-12 01:32:11 - === Starting script to check if cori is running ===
+2024-10-12 01:32:11 - Current processes matching keyword 'cori':
+user-18+ 1466604  0.7  1.9 33043884 149924 pts/1 Sl+  01:16   0:06 node cori
+2024-10-12 01:32:11 - cori is already running.
+2024-10-12 01:32:11 - === Script execution finished ===
+2024-10-12 01:37:11 - === Starting script to check if cori is running ===
+2024-10-12 01:37:11 - Current processes matching keyword 'cori':
+user-18+ 1466604  0.5  1.7 33043884 137976 pts/1 Sl+  01:16   0:06 node cori
+2024-10-12 01:37:11 - cori is already running.
+2024-10-12 01:37:11 - === Script execution finished ===
+2024-10-12 01:42:11 - === Starting script to check if cori is running ===
+2024-10-12 01:42:12 - Current processes matching keyword 'cori':
+user-18+ 1466604  0.4  1.7 33043884 140548 pts/1 Sl+  01:16   0:06 node cori
+2024-10-12 01:42:12 - cori is already running.
+2024-10-12 01:42:12 - === Script execution finished ===
+2024-10-12 01:47:12 - === Starting script to check if cori is running ===
+2024-10-12 01:47:12 - Current processes matching keyword 'cori':
+user-18+ 1466604  0.3  1.9 33111980 152984 pts/1 Sl+  01:16   0:07 node cori
+2024-10-12 01:47:12 - cori is already running.
+2024-10-12 01:47:12 - === Script execution finished ===
+2024-10-12 01:52:12 - === Starting script to check if cori is running ===
+2024-10-12 01:52:12 - Current processes matching keyword 'cori':
+user-18+ 1466604  0.3  1.9 33113516 154524 pts/1 Sl+  01:16   0:07 node cori
+2024-10-12 01:52:12 - cori is already running.
+2024-10-12 01:52:12 - === Script execution finished ===
+2024-10-12 01:57:12 - === Starting script to check if cori is running ===
+2024-10-12 01:57:12 - Current processes matching keyword 'cori':
+user-18+ 1466604  0.3  1.9 33113516 154524 pts/1 Sl+  01:16   0:07 node cori
+2024-10-12 01:57:12 - cori is already running.
+2024-10-12 01:57:12 - === Script execution finished ===
+2024-10-12 02:02:12 - === Starting script to check if cori is running ===
+2024-10-12 02:02:12 - Current processes matching keyword 'cori':
+user-18+ 1466604  0.2  1.9 33113516 154524 pts/1 Sl+  01:16   0:07 node cori
+2024-10-12 02:02:12 - cori is already running.
+2024-10-12 02:02:12 - === Script execution finished ===
+2024-10-12 02:07:12 - === Starting script to check if cori is running ===
+2024-10-12 02:07:12 - Current processes matching keyword 'cori':
+user-18+ 1466604  0.2  1.9 33113516 154788 pts/1 Sl+  01:16   0:07 node cori
+2024-10-12 02:07:12 - cori is already running.
+2024-10-12 02:07:12 - === Script execution finished ===
+2024-10-12 02:12:12 - === Starting script to check if cori is running ===
+2024-10-12 02:12:12 - Current processes matching keyword 'cori':
+user-18+ 1466604  0.2  1.9 33113516 154788 pts/1 Sl+  01:16   0:07 node cori
+2024-10-12 02:12:12 - cori is already running.
+2024-10-12 02:12:12 - === Script execution finished ===
+2024-10-12 02:17:12 - === Starting script to check if cori is running ===
+2024-10-12 02:17:12 - Current processes matching keyword 'cori':
+user-18+ 1466604  0.2  1.9 33113516 154736 pts/1 Sl+  01:16   0:07 node cori
+2024-10-12 02:17:12 - cori is already running.
+2024-10-12 02:17:12 - === Script execution finished ===
+2024-10-12 02:22:12 - === Starting script to check if cori is running ===
+2024-10-12 02:22:12 - Current processes matching keyword 'cori':
+user-18+ 1490907  1.6  1.9 33110232 152116 pts/1 Sl+  02:19   0:02 node cori
+2024-10-12 02:22:12 - cori is already running.
+2024-10-12 02:22:12 - === Script execution finished ===
+2024-10-12 02:27:12 - === Starting script to check if cori is running ===
+2024-10-12 02:27:12 - Current processes matching keyword 'cori':
+user-18+ 1490907  0.5  1.9 33110232 152116 pts/1 Sl+  02:19   0:02 node cori
+2024-10-12 02:27:12 - cori is already running.
+2024-10-12 02:27:12 - === Script execution finished ===
+2024-10-12 02:32:12 - === Starting script to check if cori is running ===
+2024-10-12 02:32:12 - Current processes matching keyword 'cori':
+user-18+ 1490907  0.3  1.9 33110232 152116 pts/1 Sl+  02:19   0:02 node cori
+2024-10-12 02:32:12 - cori is already running.
+2024-10-12 02:32:12 - === Script execution finished ===
+2024-10-12 02:37:12 - === Starting script to check if cori is running ===
+2024-10-12 02:37:12 - Current processes matching keyword 'cori':
+user-18+ 1496006  2.0  1.9 33107984 149448 pts/1 Sl+  02:35   0:02 node cori
+2024-10-12 02:37:12 - cori is already running.
+2024-10-12 02:37:12 - === Script execution finished ===
+2024-10-12 02:42:12 - === Starting script to check if cori is running ===
+2024-10-12 02:42:12 - Current processes matching keyword 'cori':
+user-18+ 1497989  0.8  1.9 33112548 154364 pts/1 Sl+  02:37   0:02 node cori
+2024-10-12 02:42:12 - cori is already running.
+2024-10-12 02:42:12 - === Script execution finished ===
+2024-10-12 02:47:12 - === Starting script to check if cori is running ===
+2024-10-12 02:47:12 - Current processes matching keyword 'cori':
+user-18+ 1497989  0.3  1.9 33112548 154364 pts/1 Sl+  02:37   0:02 node cori
+2024-10-12 02:47:12 - cori is already running.
+2024-10-12 02:47:12 - === Script execution finished ===
+2024-10-12 02:52:12 - === Starting script to check if cori is running ===
+2024-10-12 02:52:12 - Current processes matching keyword 'cori':
+user-18+ 1497989  0.2  1.9 33112548 154364 pts/1 Sl+  02:37   0:02 node cori
+2024-10-12 02:52:12 - cori is already running.
+2024-10-12 02:52:12 - === Script execution finished ===
+2024-10-12 02:57:12 - === Starting script to check if cori is running ===
+2024-10-12 02:57:12 - Current processes matching keyword 'cori':
+user-18+ 1497989  0.1  1.9 33112548 151720 pts/1 Sl+  02:37   0:02 node cori
+2024-10-12 02:57:12 - cori is already running.
+2024-10-12 02:57:12 - === Script execution finished ===
+2024-10-12 03:02:12 - === Starting script to check if cori is running ===
+2024-10-12 03:02:12 - Current processes matching keyword 'cori':
+user-18+ 1507835  3.0  1.9 33110716 153972 pts/1 Sl+  03:01   0:02 node cori
+2024-10-12 03:02:13 - cori is already running.
+2024-10-12 03:02:13 - === Script execution finished ===
+2024-10-12 03:07:13 - === Starting script to check if cori is running ===
+2024-10-12 03:07:13 - Current processes matching keyword 'cori':
+user-18+ 1507835  0.5  1.9 33110716 153972 pts/1 Sl+  03:01   0:02 node cori
+2024-10-12 03:07:13 - cori is already running.
+2024-10-12 03:07:13 - === Script execution finished ===
+2024-10-12 03:12:13 - === Starting script to check if cori is running ===
+2024-10-12 03:12:13 - Current processes matching keyword 'cori':
+user-18+ 1511787  2.2  1.9 33112496 150356 pts/1 Sl+  03:10   0:02 node cori
+2024-10-12 03:12:13 - cori is already running.
+2024-10-12 03:12:13 - === Script execution finished ===
+2024-10-12 03:17:13 - === Starting script to check if cori is running ===
+2024-10-12 03:17:13 - Current processes matching keyword 'cori':
+user-18+ 1511787  0.5  1.9 33112496 150356 pts/1 Sl+  03:10   0:02 node cori
+2024-10-12 03:17:13 - cori is already running.
+2024-10-12 03:17:13 - === Script execution finished ===
+2024-10-12 03:22:13 - === Starting script to check if cori is running ===
+2024-10-12 03:22:13 - Current processes matching keyword 'cori':
+user-18+ 1511787  0.3  1.9 33112496 150356 pts/1 Sl+  03:10   0:02 node cori
+2024-10-12 03:22:13 - cori is already running.
+2024-10-12 03:22:13 - === Script execution finished ===
+2024-10-12 03:27:13 - === Starting script to check if cori is running ===
+2024-10-12 03:27:13 - Current processes matching keyword 'cori':
+user-18+ 1511787  0.2  1.9 33112496 150356 pts/1 Sl+  03:10   0:02 node cori
+2024-10-12 03:27:13 - cori is already running.
+2024-10-12 03:27:13 - === Script execution finished ===
+2024-10-12 03:32:13 - === Starting script to check if cori is running ===
+2024-10-12 03:32:13 - Current processes matching keyword 'cori':
+user-18+ 1518472  1.5  1.9 33111768 152768 pts/1 Sl+  03:29   0:02 node cori
+2024-10-12 03:32:13 - cori is already running.
+2024-10-12 03:32:13 - === Script execution finished ===

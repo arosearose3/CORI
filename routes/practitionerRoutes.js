@@ -1,8 +1,12 @@
 import express from 'express';
 import { auth, healthcare, PROJECT_ID, LOCATION, DATASET_ID, FHIR_STORE_ID, handleBlobResponse } from '../serverutils.js';
 import axios from 'axios';
-import { google } from 'googleapis';  // Assuming you use Google API for authentication
-import { getFhirAccessToken } from '../src/lib/auth/auth.js'; // Adjust the path as needed
+
+import { getFhirAccessToken } from '../src/lib/auth/auth.js'; 
+import { service_getPractitionerById } from './practitionerService.js';
+import {service_getPractitionerRolesByOrganization} from './roleService.js';
+
+
 
 import { BASE_PATH } from '../serverutils.js'; // Adjust the path as necessary
 
@@ -124,25 +128,43 @@ router.post('/add', async (req, res) => {
 });
 
 
+// Get all Practitioners for one Org
+router.get('/getStaffForOrg', async (req, res) => {
+  const orgID = req.query.organizationId; // Use req.query.organizationId for consistency
+  if (!auth) {
+    return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
+  }
+  try {
+    const practitionerRoles = await service_getPractitionerRolesByOrganization (orgID);
+   
+    const practitionerIds = practitionerRoles.map(role => role.practitioner?.reference.split('/').pop());
+    const practitioners = await Promise.all(
+      practitionerIds.map(practitionerId => service_getPractitionerById(practitionerId))
+    );
+    
+    const validPractitioners = practitioners.filter(practitioner => practitioner !== null);
+    res.json({ resourceType: 'Bundle', type: 'collection', entry: validPractitioners.map(practitioner => ({ resource: practitioner })) });
+  } catch (error) {
+    console.error('Error fetching practitioners:', error);
+    res.status(500).json({ error: 'Failed to fetch practitioners', details: error.message });
+  }
+});
+
+
 // Get all Practitioners
 router.get('/all', async (req, res) => {
   if (!auth) {
     return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
   }
-
   try {
     const accessToken = await getFhirAccessToken();
     const searchUrl = `${FHIR_BASE_URL}/Practitioner`;
-
-
-
     const response = await axios.get(searchUrl, {
       headers: {
         Authorization: `Bearer ${accessToken}`, // Use the getAccessToken function
         Accept: 'application/fhir+json', // Ensure the request is FHIR-compliant
       },
     });
-
     const practitioners = await handleBlobResponse(response.data);
    // console.log('Fetched all practitioners:', JSON.stringify(practitioners));
     res.json(practitioners);
@@ -208,34 +230,16 @@ router.get('/:practitionerId', async (req, res) => {
   if (!auth) {
     return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
   }
-  
   const { practitionerId } = req.params;
   if (!practitionerId) {
     return res.status(400).json({ error: 'Practitioner ID is required.' });
   }
-  
   try {
-    const searchUrl = `${FHIR_BASE_URL}/Practitioner?_id=${practitionerId}`;
-    const accessToken = await getFhirAccessToken();
-
-    console.log("pract/getOne searchURL:", practitionerId);
-
-    const practitionerResponse = await axios.get(searchUrl, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/fhir+json',
-      },
-    });
-
-    // Handle and filter the response to remove unnecessary fields
-    let practitioner = practitionerResponse.data?.entry?.map(entry => entry.resource) || [];
-
-    // If only one practitioner is returned, just return the resource object
-    if (practitioner.length === 1) {
-      practitioner = practitioner[0];
+    const practitioner = await getPractitionerById(practitionerId);
+    if (!practitioner) {
+      return res.status(404).json({ error: `Practitioner with ID ${practitionerId} not found.` });
     }
-
-    // Respond with the stripped-down practitioner data
+    // Respond with the practitioner data
     res.json(practitioner);
   } catch (error) {
     console.error('Error fetching Practitioner:', error);
@@ -243,14 +247,20 @@ router.get('/:practitionerId', async (req, res) => {
   }
 });
 
+
+// Delete one provider based on name 
 router.delete('/removeUnknown', async (req, res) => {
-  try {
+  console.log ("in remove");
+ 
+    console.log ("in remove after try");
     // Get the OAuth2 access token
     const accessToken = await getFhirAccessToken();
 
-    // Construct the search URL for Practitioners with name "unknown"
-    const searchUrl = `${FHIR_BASE_URL}/Practitioner?name=unknown`;
+    // Construct the search URL for what's to be deleted
 
+    const searchUrl = `${FHIR_BASE_URL}/Practitioner?name:contains=Marta`;
+
+    console.log ("remove search:"+searchUrl);
     // Make the GET request to search for unknown Practitioners
     const searchResponse = await axios.get(searchUrl, {
       headers: {
@@ -259,10 +269,11 @@ router.delete('/removeUnknown', async (req, res) => {
       },
     });
 
+    console.log ("remove response:"+JSON.stringify(searchResponse.data));
     const practitioners = searchResponse.data.entry || [];
 
     if (practitioners.length === 0) {
-      return res.status(200).json({ message: 'No Practitioners with name "unknown" found.' });
+      return res.status(200).json({ message: 'No Practitioners found.' });
     }
 
     // Delete each found Practitioner
@@ -281,10 +292,10 @@ router.delete('/removeUnknown', async (req, res) => {
       message: `Successfully deleted ${practitioners.length} Practitioner(s) with name "unknown".`,
       deletedCount: practitioners.length
     });
-  } catch (error) {
+  
     console.error('Error in removeUnknown:', error.message);
     res.status(500).json({ error: 'An error occurred while removing unknown Practitioners.', details: error.message });
-  }
+  
 });
 
 

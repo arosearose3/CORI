@@ -206,9 +206,11 @@ function parseDOB(dobString) {
   }
   
   async function createPractitioner(practitionerData) {
+    console.log ("in CreatePract:"+JSON.stringify(practitionerData));
     try {
       const dob = parseDOB(practitionerData.dob);
       const npi = validateNPI(practitionerData.npi);
+      console.log ("in createPrac:", dob, npi);
   
       const response = await axios.post(`${BASE_URL}/practitioner/add`, {
         resourceType: 'Practitioner',
@@ -223,7 +225,9 @@ function parseDOB(dobString) {
           value: npi
         }]
       });
-      return response.data.data.id;
+
+      console.log ("in create, response.data:"+JSON.stringify(response.data));
+      return response.data.practitionerID;
     } catch (error) {
       console.error('Error creating practitioner:', error.response ? error.response.data : error.message);
       return null;
@@ -236,7 +240,8 @@ function parseDOB(dobString) {
         practitionerId,
         organizationId
       });
-      return response.data.data.id;
+      console.log ("in createPR, response.data:"+JSON.stringify(response.data));
+      return response.data.practitionerRoleID;
     } catch (error) {
       console.error('Error creating practitioner role:', error.response ? error.response.data : error.message);
       return null;
@@ -260,11 +265,20 @@ function parseDOB(dobString) {
   async function processRow(row) {
     console.log('Processing row:', row);  // Log the raw row data
     
+    let firstName= row['fname'];
+    let lastName=  row['lname'] ;
+    let dob= row['dob'];
+    let  npi= row['npi'];
+
+    console.log ("row data", firstName, lastName,dob, npi);
+
+ 
+    
     const practitionerId = await createPractitioner({
-      firstName: row['First Name'] || row['firstName'] || row['FirstName'],
-      lastName: row['Last Name'] || row['lastName'] || row['LastName'],
-      dob: row['DOB'] || row['dob'] || row['DateOfBirth'],
-      npi: row['NPI'] || row['npi']
+      firstName: firstName,
+      lastName: lastName,
+      dob: dob,
+      npi: npi
     });
   
     if (practitionerId) {
@@ -296,10 +310,17 @@ function parseDOB(dobString) {
     return new Promise((resolve, reject) => {
       const results = [];
       fs.createReadStream(CSV_FILE_PATH)
-        .pipe(csv())
+        .pipe(
+          csv({
+            headers: ['fname', 'lname', 'dob', 'npi', 'email'], // Define expected headers
+            skipEmptyLines: true, // Skip empty lines if needed
+            trim: true, // Trim whitespace from headers and fields
+            mapHeaders: ({ header, index }) => (index < 5 ? header : null), // Ignore extra columns
+          })
+        )
         .on('data', (data) => results.push(data))
         .on('end', async () => {
-          console.log('CSV Headers:', Object.keys(results[0]));  // Log the CSV headers
+          console.log('CSV Headers:', Object.keys(results[0])); // Log the CSV headers
           for (const row of results) {
             await processRow(row);
           }
@@ -309,5 +330,5 @@ function parseDOB(dobString) {
         .on('error', reject);
     });
   }
-  
+
   processCsvFile().then(() => console.log('Script completed')).catch(console.error);

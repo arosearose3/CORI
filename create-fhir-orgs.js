@@ -1,3 +1,9 @@
+
+//
+// October 11 2024. DO NOT RUN THIS AGAIN.  The organizations are imported. 
+//
+
+
 import axios from 'axios';
 import clinics from './clinics.json' assert { type: 'json' };
 

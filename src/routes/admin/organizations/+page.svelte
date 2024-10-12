@@ -2,13 +2,14 @@
 <script>
   import { onMount } from 'svelte';
   import { user, abilities } from '$lib/stores.js';
-  import OrganizationList from './OrganizationList.svelte';
+
   import AddOrganization from './AddOrganization.svelte';
   import AssociatePractitionersOrganizations from './AssociatePractitionersOrganizations.svelte';
   import PickOrganization from './PickOrganization.svelte';
   import SetUserRoles from './SetUserRoles.svelte';
 
   import { base } from '$app/paths'; // Import base path
+
 
 
   let organizations = [];
@@ -93,19 +94,21 @@
       fetchOrganizations();
     }
   }
+
+  function handleOrgSelected(event) {
+    selectedOrganization = event.detail.organization;
+    console.log('Selected Organization:', selectedOrganization);
+    
+    showStaffList = true;
+
+
+  }
+
+
 </script>
 
 <!-- Page Content -->
 
-
-<SetUserRoles />
-<hr>
-<AddOrganization />
-<hr>
-<AssociatePractitionersOrganizations />
-<hr>
-<PickOrganization organizations={organizations}/>
-<hr>
 
 {#if generalError}
   <div class="error-message">
@@ -114,15 +117,21 @@
       <button on:click={retryFetch}>Retry</button>
     {/if}
   </div>
-{:else if organizations.length > 0}
-  <OrganizationList
-    {organizations}
-    {practitionerRoles}
-    {selectPractitionerRole}
-  />
+
 {:else}
   <p>Loading organizations...</p>
 {/if}
+
+<SetUserRoles />
+<hr>
+<AddOrganization />
+<hr>
+<AssociatePractitionersOrganizations />
+<hr>
+<PickOrganization organizations={organizations} on:OrgSelected={handleOrgSelected}/>
+
+
+
 
 <style>
   .error-message {

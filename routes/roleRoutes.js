@@ -3,6 +3,7 @@ import { auth, healthcare, PROJECT_ID, LOCATION, DATASET_ID, FHIR_STORE_ID, hand
 import axios from 'axios';
 import { google } from 'googleapis';  // Assuming you use Google API for authentication
 import { getFhirAccessToken } from '../src/lib/auth/auth.js'; // Adjust the path as needed
+import {service_getPractitionerRolesByOrganization} from './roleService.js';
 
 import { BASE_PATH } from '../serverutils.js'; // Adjust the path as necessary
 
@@ -22,26 +23,11 @@ router.get('/withOrganization', async (req, res) => {
       return res.status(400).json({ error: 'Organization ID is required.' });
     }
 
-    // Get the OAuth2 access token
-    const accessToken = await getFhirAccessToken();
+    // Call the service to get PractitionerRoles
+    const practitionerRoles = await service_getPractitionerRolesByOrganization(organizationId);
 
-    // Construct the search URL for PractitionerRoles with the specific organization
-    const searchUrl = `${FHIR_BASE_URL}/PractitionerRole?organization=Organization/${organizationId}`;
-
-    console.log ("role/withOrg searchUrl:"+searchUrl);
-
-    // Make the GET request to fetch the PractitionerRoles
-    const response = await axios.get(searchUrl, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/fhir+json', // Ensure the response is FHIR-compliant JSON
-      },
-    });
-
-    // Handle the response and return the FHIR Bundle
-    const practitionerRoles = response.data;
+    // Return the PractitionerRoles (FHIR Bundle)
     res.status(200).json(practitionerRoles);
-
   } catch (error) {
     console.error('Error fetching PractitionerRoles with Organization:', error.message);
     res.status(500).json({ error: 'Failed to fetch PractitionerRoles', details: error.message });
