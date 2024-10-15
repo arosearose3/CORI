@@ -1,33 +1,40 @@
-
-import { auth, healthcare, PROJECT_ID, LOCATION, DATASET_ID, FHIR_STORE_ID, handleBlobResponse } from '../serverutils.js';
-import { BASE_PATH } from '../serverutils.js'; // Adjust the path as necessary
-
 import express from 'express';
-import axios from 'axios';
-import dotenv from 'dotenv';
-
-dotenv.config(); // Load environment variables
+import osUtils from 'node-os-utils';
 
 const router = express.Router();
 
-router.get('/serverstats', (req, res) => {
-    // Get the server stats asynchronously
-    osUtils.cpuUsage(function(cpuUsage) {
-        osUtils.freemem(function(freeMem) {
-            const serverStats = {
-                processUptime: process.uptime(), // Uptime of the Node.js process in seconds
-                systemUptime: osUtils.sysUptime(), // Uptime of the system in hours
-                totalMemory: osUtils.totalmem(), // Total system memory in MB
-                freeMemory: freeMem, // Free system memory in MB
-                usedMemory: osUtils.totalmem() - freeMem, // Used memory in MB
-                cpuUsage: (cpuUsage * 100).toFixed(2) // CPU usage as a percentage
-            };
-            
-            // Send the stats in JSON format
-            res.json(serverStats);
-        });
-    });
+router.get('/serverstats', async (req, res) => {
+    try {
+        const cpuUsage = await osUtils.cpu.usage();
+        const cpuFree = await osUtils.cpu.free();
+        const memInfo = await osUtils.mem.info();
+        const driveInfo = await osUtils.drive.info();
+        const netStats = await osUtils.netstat.stats();
+        const systemUptime = osUtils.os.uptime(); // Uptime in seconds
+        const platform = osUtils.os.platform();
+        const hostname = osUtils.os.hostname();
+        const totalProcesses = await osUtils.proc.totalProcesses();
+
+        const serverStats = {
+            processUptime: process.uptime(), // Node.js process uptime in seconds
+            systemUptime: (systemUptime / 3600).toFixed(2), // System uptime in hours
+            platform,
+            hostname,
+            totalMemory: memInfo.totalMemMb,
+            freeMemory: memInfo.freeMemMb,
+            usedMemory: memInfo.usedMemMb,
+            cpuUsage: (cpuUsage * 100).toFixed(2),
+            cpuFree: (cpuFree * 100).toFixed(2),
+            drive: driveInfo,
+            netStats,
+            totalProcesses
+        };
+
+        res.json(serverStats);
+    } catch (error) {
+        console.error('Error fetching server stats:', error);
+        res.status(500).json({ error: 'Failed to retrieve server stats' });
+    }
 });
 
 export default router;
-

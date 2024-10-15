@@ -7,30 +7,34 @@ import http from 'http';
 import { createServer } from 'vite';
 import cors from 'cors';
 import dotenv from 'dotenv';
-//import { WebSocketServer } from 'ws';
+import passport from 'passport';
+import { Strategy as FacebookStrategy } from 'passport-facebook';
 
-import availabilityRoutes from './routes/availabilityRoutes.js';
-import serverstatsRoutes from './routes/serverstatsRoutes.js';
 import api211Routes from './routes/api211Routes.js';
-import practitionerRoutes from './routes/practitionerRoutes.js';
-import organizationRoutes from './routes/organizationRoutes.js';
-import roleRoutes from './routes/roleRoutes.js';
-import patientRoutes from './routes/patientRoutes.js';
+import availabilityRoutes from './routes/availabilityRoutes.js';
 import conditionRoutes from './routes/conditionRoutes.js';
 import consentRoutes from './routes/consentRoutes.js';
+import emailRoutes from './routes/emailRoutes.js';
+import exclusionRoutes from './routes/exclusionRoutes.js';
+import fileuploadRoutes from './routes/fileuploadRoutes.js';
 import goalRoutes from './routes/goalRoutes.js';
+import organizationRoutes from './routes/organizationRoutes.js';
+import patientRoutes from './routes/patientRoutes.js';
+import practitionerRoutes from './routes/practitionerRoutes.js';
 import provenanceRoutes from './routes/provenanceRoutes.js';
+import roleRoutes from './routes/roleRoutes.js';
+import serverstatsRoutes from './routes/serverstatsRoutes.js';
 import serviceRequestRoutes from './routes/serviceRequestRoutes.js';
 import taskRoutes from './routes/taskRoutes.js';
-import exclusionRoutes from './routes/exclusionRoutes.js';
+
 
 import { BASE_PATH } from './serverutils.js'; // Adjust the path as necessary
 
-
 dotenv.config(); // Load environment variables
+
 const app = express();
 const server = http.createServer(app);
-const PORT = 8080;
+const PORT = 3000;
 
 // Setup Google OAuth2 client
 const oauth2Client = new OAuth2Client(
@@ -69,6 +73,47 @@ app.use(session({
   }
 }));
 
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Serialize user
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+passport.deserializeUser((user, done) => {
+  done(null, user);
+});
+
+passport.use(new FacebookStrategy({
+  clientID: process.env.FB_APP_ID,
+  clientSecret: process.env.FB_APP_SECRET,
+  callbackURL: `${BASE_PATH}/auth/facebook/callback`,
+  profileFields: ['id', 'displayName', 'email']  // Specify what fields you want from the user's Facebook profile
+}, (accessToken, refreshToken, profile, done) => {
+      // Store user information in session
+      
+      req.session.user = {
+        id: profile.id,
+        email: profile.email,
+        name: profile.displayName,
+        picture: null
+      };
+      req.session.fbToken = accessToken;
+  return done(null, profile);
+}));
+
+// Route to start OAuth2 process
+app.get(`${BASE_PATH}/auth/facebook/url`, passport.authenticate('facebook', { scope: ['email'] }));
+
+// Callback route after Facebook login
+app.get(`${BASE_PATH}/auth/facebook/callback`,
+  passport.authenticate('facebook', { failureRedirect: '/login' }),
+  (req, res) => {
+    // Successful authentication, redirect to your home page
+    res.redirect(`${BASE_PATH}`);
+  }
+);
 
 app.post(`${BASE_PATH}/api/send-sms`, async (req, res) => {
   const { message, phoneNumber } = req.body;
@@ -117,9 +162,6 @@ app.get(`${BASE_PATH}/auth/google/callback`, async (req, res) => {
     const userInfo = await oauth2Client.request({
       url: 'https://www.googleapis.com/oauth2/v3/userinfo'
     });
-
-  
-
     // Store user information in session
     req.session.user = {
       id: userInfo.data.sub,
@@ -225,23 +267,22 @@ app.post(`${BASE_PATH}/auth/logout`, (req, res) => {
 });
 
 
-
 app.use(`${BASE_PATH}/api/api211`, api211Routes);
 app.use(`${BASE_PATH}/api/availability`, availabilityRoutes);
-app.use(`${BASE_PATH}/api/practitioner`, practitionerRoutes);
-app.use(`${BASE_PATH}/api/organization`, organizationRoutes);
-app.use(`${BASE_PATH}/api/role`, roleRoutes);
-app.use(`${BASE_PATH}/api/patient`, patientRoutes);
 app.use(`${BASE_PATH}/api/condition`, conditionRoutes);
 app.use(`${BASE_PATH}/api/consent`, consentRoutes);
-app.use(`${BASE_PATH}/api/goal`, goalRoutes);
-app.use(`${BASE_PATH}/api/provenance`, provenanceRoutes);
-app.use(`${BASE_PATH}/api/task`, taskRoutes);
-app.use(`${BASE_PATH}/api/servicerequest`, serviceRequestRoutes);
-app.use(`${BASE_PATH}/api/serverstats`, serviceRequestRoutes);
+app.use(`${BASE_PATH}/api/email`, emailRoutes);
 app.use(`${BASE_PATH}/api/exclusion`, exclusionRoutes);
-
-
+app.use(`${BASE_PATH}/api/fileupload`, fileuploadRoutes);
+app.use(`${BASE_PATH}/api/goal`, goalRoutes);
+app.use(`${BASE_PATH}/api/organization`, organizationRoutes);
+app.use(`${BASE_PATH}/api/patient`, patientRoutes);
+app.use(`${BASE_PATH}/api/practitioner`, practitionerRoutes);
+app.use(`${BASE_PATH}/api/provenance`, provenanceRoutes);
+app.use(`${BASE_PATH}/api/role`, roleRoutes);
+app.use(`${BASE_PATH}/api/serverstats`, serverstatsRoutes);
+app.use(`${BASE_PATH}/api/servicerequest`, serviceRequestRoutes);
+app.use(`${BASE_PATH}/api/task`, taskRoutes);
 
 
 // Handle all other requests with the SvelteKit handler

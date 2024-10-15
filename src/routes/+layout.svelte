@@ -166,6 +166,17 @@
     }
   }
 
+  // Function to handle user login
+  async function handleFBLogin() {
+    console.log('Handling login with base:', base);
+    try {
+      const authUrl = `${base}/auth/facebook/url`;
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error('Error during login:', error);
+    }
+  }
+
   // Function to handle user logout
   async function handleLogout() {
     console.log('handleLogout called with base:', base);
@@ -435,6 +446,8 @@
           <button class="nav-button logout" on:click={handleLogout} aria-label="Log Out">Logout</button>
         {:else}
           <button class="nav-button" on:click={handleLogin} aria-label="Log In with Google">Login with Google</button>
+          <button class="nav-button" on:click={handleFBLogin} aria-label="Log In with Facebook">Login with Facebook</button>
+ 
         {/if}
       </div>
     </div>

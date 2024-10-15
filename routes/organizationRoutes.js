@@ -3,12 +3,29 @@ import { auth, healthcare, PROJECT_ID, LOCATION, DATASET_ID, FHIR_STORE_ID, hand
 import axios from 'axios';
 import { google } from 'googleapis';  // Assuming you use Google API for authentication
 import { getFhirAccessToken } from '../src/lib/auth/auth.js'; // Adjust the path as needed
+import {UserAdminCodes} from './userAdminCodes.js';
 
 import { BASE_PATH } from '../serverutils.js'; // Adjust the path as necessary
+
+import { service_extractOrganizations} from './organizationService.js';  
 
 const router = express.Router();
 const FHIR_BASE_URL = `https://healthcare.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}/fhir`;
 
+
+router.get('/getCodeByOrganizationId', (req, res) => {
+  const { organizationId } = req.query;
+  const orgId = organizationId;
+
+  if (!orgId) {
+    return res.status(400).json({ error: 'orgId is required' });
+  }
+  const found = UserAdminCodes.find(item => item.OrganizationId === orgId);
+  if (!found) {
+    return res.status(404).json({ error: 'Practitioner ID not found' });
+  }
+  return res.json({ code: found.code });
+});
 
 // Add a new Organization
 router.post('/add', async (req, res) => {
@@ -42,39 +59,7 @@ router.post('/add', async (req, res) => {
    }
 });
 
-// Get all Organizations
-async function extractOrganizations(url, accessToken) {
-  let organizations = [];
-  let nextPageUrl = url;
 
-  while (nextPageUrl) {
-    const response = await axios.get(nextPageUrl, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/fhir+json',
-      },
-    });
-
-    const bundle = response.data;
-
-    if (!bundle || bundle.resourceType !== 'Bundle' || !Array.isArray(bundle.entry)) {
-      throw new Error('Invalid FHIR Bundle format');
-    }
-
-    // Extract Organizations
-    const pageOrganizations = bundle.entry
-      .map(entry => entry.resource)
-      .filter(resource => resource.resourceType === 'Organization');
-    
-    organizations = organizations.concat(pageOrganizations);
-
-    // Find the 'next' link for pagination
-    const nextLink = bundle.link.find(link => link.relation === 'next');
-    nextPageUrl = nextLink ? nextLink.url : null;
-  }
-
-  return organizations;
-}
 
 // Updated /all endpoint to handle pagination
 router.get('/all', async (req, res) => {
@@ -94,7 +79,7 @@ router.get('/all', async (req, res) => {
     console.log("Fetching organizations from:", url);
 
     // Extract all Organizations handling pagination
-    const organizations = await extractOrganizations(url, accessToken);
+    const organizations = await service_extractOrganizations(url, accessToken);
     console.log("Successfully fetched organizations");
 
     res.json(organizations);
@@ -139,10 +124,69 @@ router.get('/getOrgName', async (req, res) => {
     const organization = organizationResponse.data;
     const orgName = organization.name || 'Unknown Organization';
 
+    console.log ("org/getname name:"+orgName);
+
     res.json(orgName );
   } catch (error) {
     console.error('Error fetching Organization name:', error.message);
     res.status(500).json({ error: 'Failed to fetch Organization name', details: error.message });
+  }
+});
+
+//get admin email from OrgId 
+router.get('/getOrgEmail', async (req, res) => {
+  if (!auth) {
+    return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
+  }
+
+  const { reference } = req.query;
+
+  // Extract organizationId from the reference (e.g., "Organization/71888285-135a-4eb2-a579-93e3f2e65ea8")
+  const organizationId = reference?.includes('/') ? reference.split('/')[1] : reference;
+
+  if (!organizationId) {
+    return res.status(400).json({ error: 'Invalid organization reference. Unable to extract Organization ID.' });
+  }
+
+  try {
+    const accessToken = await getFhirAccessToken();
+    const searchUrl = `${FHIR_BASE_URL}/Organization/${organizationId}`;
+
+    const organizationResponse = await axios.get(searchUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/fhir+json',
+      },
+    });
+
+    const organization = organizationResponse.data;
+    console.log("org getEmail org:", JSON.stringify(organization));
+    let orgEmail = null;
+    
+    // Check if the 'contact' array exists and contains telecom data
+    if (organization.contact && Array.isArray(organization.contact)) {
+      // Loop through each contact to find the email
+      for (const contact of organization.contact) {
+        if (contact.telecom && Array.isArray(contact.telecom)) {
+          const emailEntry = contact.telecom.find(t => t.system === 'email');
+          if (emailEntry) {
+            orgEmail = emailEntry.value;
+            break; // Exit loop after finding the first email
+          }
+        }
+      }
+    }
+    
+    if (!orgEmail) {
+      console.log("No email found for organization");
+    }
+
+    // Return the email in the correct structure
+    res.json({ email: orgEmail });
+    
+  } catch (error) {
+    console.error('Error fetching Organization email:', error.message);
+    res.status(500).json({ error: 'Failed to fetch Organization email', details: error.message });
   }
 });
 
@@ -177,7 +221,7 @@ router.get('/:organizationId', async (req, res) => {
 });
 
 
-//get one Organization  
+//delete one Organization  
 router.delete('/:organizationId', async (req, res) => {
   if (!auth) {
     return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
@@ -191,7 +235,7 @@ router.delete('/:organizationId', async (req, res) => {
     const accessToken = await getFhirAccessToken();
     const searchUrl = `${FHIR_BASE_URL}/Organization/${organizationId}`;
 
-    const organizationResponse = await axios.get(searchUrl, {
+    const organizationResponse = await axios.delete(searchUrl, {
       headers: {
         Authorization: `Bearer ${accessToken}`, // Use the getAccessToken function
         Accept: 'application/fhir+json', // Ensure the request is FHIR-compliant
@@ -201,8 +245,8 @@ router.delete('/:organizationId', async (req, res) => {
     const organization = await handleBlobResponse(organizationResponse.data);
     res.json(organization);
   } catch (error) {
-    console.error('Error fetching Organization:', error);
-    res.status(500).json({ error: 'Failed to fetch Organization', details: error.message });
+    console.error('Error deleting Organization:', error);
+    res.status(500).json({ error: 'Failed to delete Organization', details: error.message });
   }
 });
 

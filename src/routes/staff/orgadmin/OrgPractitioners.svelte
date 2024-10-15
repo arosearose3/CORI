@@ -45,8 +45,8 @@
         const data = await response.json();
   
         // Validate the bundle structure
-        if (data.resourceType === 'Bundle' && Array.isArray(data.entry)) {
-          const practitionerRoles = data.entry.map(entry => entry.resource);
+        if (data) {
+          const practitionerRoles = data;
   
           // Initialize a new array to store the combined data
           const loadedPractitioners = [];

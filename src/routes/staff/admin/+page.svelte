@@ -8,13 +8,11 @@
 
 </script>
 
-<h4>admin can see all Practitioners</h4>
-
-
+<h4>All Practitioners, although no paging.</h4>
 <div class="practitioner-container">
-<UploadCombine />
 
-<IngestCoriRoster />
+  <AllPractitionersBig />
+<!-- <IngestCoriRoster />
 <hr>
 <AllPractitioners />
 <hr>
@@ -22,7 +20,7 @@
 <hr>
 <IngestPractitioners />
 <hr>
-<AddPractitioner />
+<AddPractitioner /> -->
 
 </div>
 

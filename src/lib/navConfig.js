@@ -1,20 +1,20 @@
 import { base } from '$app/paths'; // Import the base path
 
 export const navItems = [
-  {
+/*   {
     label: 'Clients',
     icon: '⚙️',
     path: `${base}/clients/provider`,
     subject: 'Provider Clients',
     roles: ['provider'], // Accessible by provider 
-  },
-  {
+  }, */
+/*   {
     label: 'Organization Clients',
     icon: '⚙️',
     path: `${base}/clients/orgadmin`,
     subject: 'Organization Clients',
     roles: ['orgadmin'], // Accessible by orgadmin and admin roles
-  },
+  }, */
   {
     label: 'All Cori Clients',
     icon: '⚙️',
@@ -57,23 +57,23 @@ export const navItems = [
     icon: '⚙️',
     path: `${base}/settings/admin`,
     subject: 'Admin Settings',
-    roles: ['admin'], // Accessible by multiple roles
+    roles: ['admin'], 
 
   },
   {
-    label: 'Settings',
+    label: 'Organization Settings',
     icon: '⚙️',
     path: `${base}/settings/orgadmin`,
     subject: 'Org Settings',
-    roles: ['orgadmin'], // Accessible by multiple roles
+    roles: ['orgadmin'], 
 
   },
   {
-    label: 'Settings',
+    label: 'Provider Settings',
     icon: '⚙️',
     path: `${base}/settings/provider`,
     subject: 'Provider Settings',
-    roles: ['provider'], // Accessible by multiple roles
+    roles: ['provider'],
 
   },
   {
@@ -81,26 +81,26 @@ export const navItems = [
     icon: '⚙️',
     path: `${base}/settings/client`,
     subject: 'Client Settings',
-    roles: ['client'], // Accessible by multiple roles
+    roles: ['client'], 
 
   },
   
-  {
+/*   {
     label: 'Consents',
     icon: '✅',
     path: `${base}/consents`,
     subject: 'Consents',
     roles: ['client', 'provider', 'orgadmin','admin'],
 
-  },
+  }, */
   {
-    label: 'Organization Search',
+    label: 'Search for Services',
     icon: '🔍',
     path: `${base}/organizationsearch`,
     subject: 'Organization Search',
     roles: ['provider', 'admin', 'orgadmin'],
   },
-  {
+/*   {
     label: 'Notifications',
     icon: '🔔',
     path: `${base}/notifications`,
@@ -114,7 +114,7 @@ export const navItems = [
     path: `${base}/messages`,
     subject: 'Messages',
     roles: ['client', 'provider','orgadmin', 'admin'],
-  },
+  }, */
   {
     label: 'Capacity and Availability',
     icon: '✉️',
@@ -123,13 +123,13 @@ export const navItems = [
     roles: ['provider', 'admin'], // Accessible by provider and admin roles
   },
 
-  {
+/*   {
     label: 'Referrals',
     icon: '📄',
     path: `${base}/referrals`,
     subject: 'Referrals',
     roles: ['client', 'provider','org admin', 'admin'],
 
-  },
+  }, */
 
 ];
