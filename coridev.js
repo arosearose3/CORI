@@ -10,6 +10,7 @@ import dotenv from 'dotenv';
 import passport from 'passport';
 import { Strategy as FacebookStrategy } from 'passport-facebook';
 
+
 import api211Routes from './routes/api211Routes.js';
 import availabilityRoutes from './routes/availabilityRoutes.js';
 import conditionRoutes from './routes/conditionRoutes.js';
@@ -34,7 +35,7 @@ dotenv.config(); // Load environment variables
 
 const app = express();
 const server = http.createServer(app);
-const PORT = 3000;
+const PORT = process.env.RUNTIME_ENV === 'prod' ? 3000 : 3001;
 
 // Setup Google OAuth2 client
 const oauth2Client = new OAuth2Client(
@@ -44,13 +45,10 @@ const oauth2Client = new OAuth2Client(
 );
 
 
-/* // Middleware configuration
 app.use(cors({
-//  origin: process.env.CLIENT_URL, // Ensure this is set in your .env file
-  origin: '*',
+  origin: process.env.CLIENT_URL, // Ensure this matches your client URL
   credentials: true
 }));
- */
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -66,9 +64,9 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // Set to true in production with HTTPS
+    secure: process.env.RUNTIME_ENV === 'prod',
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: process.env.RUNTIME_ENV === 'prod' ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
   }
 }));
@@ -79,41 +77,48 @@ app.use(passport.session());
 
 // Serialize user
 passport.serializeUser((user, done) => {
+  console.log('Serializing user:', user);
   done(null, user);
 });
+
 passport.deserializeUser((user, done) => {
+  console.log('Deserializing user:', user);
   done(null, user);
 });
 
 passport.use(new FacebookStrategy({
   clientID: process.env.FB_APP_ID,
   clientSecret: process.env.FB_APP_SECRET,
-  callbackURL: `${BASE_PATH}/auth/facebook/callback`,
-  profileFields: ['id', 'displayName', 'email']  // Specify what fields you want from the user's Facebook profile
-}, (accessToken, refreshToken, profile, done) => {
-      // Store user information in session
-      
-      req.session.user = {
-        id: profile.id,
-        email: profile.email,
-        name: profile.displayName,
-        picture: null
-      };
-      req.session.fbToken = accessToken;
-  return done(null, profile);
+  callbackURL: `${process.env.CLIENT_URL}${BASE_PATH}/auth/facebook/callback`,
+  profileFields: ['id', 'displayName', 'email', 'photos'],
+  passReqToCallback: true
+}, (req, accessToken, refreshToken, profile, done) => {
+  const user = {
+    id: profile.id,
+    email: profile.emails && profile.emails[0].value,
+    name: profile.displayName,
+    picture: profile.photos && profile.photos[0].value || null,
+    fbToken: accessToken
+  };
+  console.log('Session ID in Strategy:', req.sessionID);
+  return done(null, user);
 }));
+
+
 
 // Route to start OAuth2 process
 app.get(`${BASE_PATH}/auth/facebook/url`, passport.authenticate('facebook', { scope: ['email'] }));
 
-// Callback route after Facebook login
+
+
 app.get(`${BASE_PATH}/auth/facebook/callback`,
-  passport.authenticate('facebook', { failureRedirect: '/login' }),
+  passport.authenticate('facebook', { failureRedirect: '/', failureMessage: true }),
   (req, res) => {
-    // Successful authentication, redirect to your home page
+    console.log('Session ID in /auth/facebook/callback:', req.sessionID);
     res.redirect(`${BASE_PATH}`);
   }
 );
+
 
 app.post(`${BASE_PATH}/api/send-sms`, async (req, res) => {
   const { message, phoneNumber } = req.body;
@@ -167,104 +172,132 @@ app.get(`${BASE_PATH}/auth/google/callback`, async (req, res) => {
       id: userInfo.data.sub,
       email: userInfo.data.email,
       name: userInfo.data.name,
-      picture: userInfo.data.picture
+      picture: userInfo.data.picture,
     };
 
     req.session.googleToken = tokens.access_token;
+    console.log('User authenticated:', req.session.user); //client will get the user data
+    // Server-side
+    let u = `${process.env.CLIENT_URL}${BASE_PATH}/`;
+    res.redirect(u); // No userData in URL
 
-    console.log('User authenticated:', req.session.user);
-    let u = `${process.env.CLIENT_URL}${BASE_PATH}`;
-    console.log ("redirect to :"+u);
-    res.redirect(u); // Redirect after authentication
   } catch (error) {
     console.error('Error during Google authentication:', error);
     res.status(500).send('Authentication failed');
   }
 });
 
+  // Function to verify Google token
+  async function verifyGoogleToken(token)  {
+    const url = `https://oauth2.googleapis.com/tokeninfo?access_token=${token}`;
+    const response = await fetch(url);
+    return response.ok;
+  };
 
-app.get(`${BASE_PATH}/auth/user`, async (req, res) => {
-  if (req.session.user) {
-    const googleToken = req.session.googleToken; // Retrieve the token from the session
+  // Function to verify Facebook token
+  async function verifyFacebookToken (token)  {
+    const url = `https://graph.facebook.com/me?access_token=${token}`;
+    const response = await fetch(url);
+    console.log ("verify FBtoken response:", JSON.stringify(response));
+    return response.ok;
+  };
 
-    if (googleToken) {
-      // Verify the token by making a request to the Google API
-      const url = `https://oauth2.googleapis.com/tokeninfo?access_token=${googleToken}`;
-
-      try {
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          // Token is revoked or invalid
-          console.log('Token is revoked or invalid, clearing user session.');
-          req.session.user = null; // Clear user information from session
-          req.session.googleToken = null; // Clear the Google token
+  app.get(`${BASE_PATH}/auth/user`, async (req, res) => {
+    console.log("Session ID in /auth/user:", req.sessionID);
+    console.log("req.user:", req.user);
+    console.log("req.session.passport:", req.session.passport);
+  
+    // Extract tokens
+    const googleToken = req.session.googleToken;
+    const facebookToken = req.user && req.user.fbToken;
+  
+    try {
+      let isTokenValid = false;
+      let user = null;
+  
+      if (googleToken) {
+        isTokenValid = await verifyGoogleToken(googleToken);
+        if (!isTokenValid) {
+          req.session.user = null;
+          req.session.googleToken = null;
           return res.status(401).json({ error: 'Not authenticated' });
         }
-
-        // If token is valid, return user info
-        return res.json({ user: req.session.user });
-      } catch (error) {
-        console.error('Error verifying Google token:', error);
-        req.session.user = null; // Clear user information from session
-        req.session.googleToken = null; // Clear the Google token
-        return res.status(500).json({ error: 'Internal server error' });
+        user = req.session.user;
       }
-    } else {
-      // If there's no token, clear user session
-      console.log('No Google token found, clearing user session.');
-      req.session.user = null; // Clear user information from session
-      return res.status(401).json({ error: 'Not authenticated' });
+  
+      if (facebookToken) {
+        isTokenValid = await verifyFacebookToken(facebookToken);
+        if (!isTokenValid) {
+          console.log('Facebook token is invalid, clearing user session.');
+          if (req.session.passport) {
+            req.session.passport.user = null;
+          }
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
+        user = req.user;
+      }
+  
+      if (isTokenValid && user) {
+        return res.json({ user });
+      } else {
+        req.session.user = null;
+        if (req.session.passport) {
+          req.session.passport.user = null;
+        }
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+    } catch (error) {
+      console.error('Error verifying token:', error);
+      req.session.user = null;
+      if (req.session.passport) {
+        req.session.passport.user = null;
+      }
+      req.session.googleToken = null;
+      return res.status(500).json({ error: 'Internal server error' });
     }
-  } else {
-    res.status(401).json({ error: 'Not authenticated' });
-  }
-});
+  });
 
 
-app.post(`${BASE_PATH}/auth/logout`, (req, res) => {
-  // End the user's authentication with Google OAuth (e.g., revoke the token)
-  const googleToken = req.session.googleToken; // Assuming the token is stored in the session
-  if (googleToken) {
-    // Revoke the token using Google API
-    const url = `https://oauth2.googleapis.com/revoke?token=${googleToken}`;
-    
-    fetch(url, { method: 'POST' })
-      .then(response => {
+
+  app.post(`${BASE_PATH}/auth/logout`, async (req, res) => {
+    if (!req.session) {
+      return res.status(400).json({ error: 'No active session found' });
+    }
+  
+    try {
+      // Revoke the Google token if it exists
+      const googleToken = req.session.googleToken;
+      if (googleToken) {
+        const url = `https://oauth2.googleapis.com/revoke?token=${googleToken}`;
+        const response = await fetch(url, { method: 'POST' });
         if (!response.ok) {
           throw new Error('Failed to revoke Google token');
         }
-        
-        // Destroy the session after revoking the token
-        req.session.destroy(err => {
-          if (err) {
-            return res.status(500).json({ error: 'Could not log out' });
-          }
-          res.clearCookie('connect.sid');
-          res.json({ success: true });
-        });
-      })
-      .catch(err => {
-        console.error(err);
-        req.session.destroy(err => {
-          if (err) {
-            return res.status(500).json({ error: 'Could not log out' });
-          }
-          res.clearCookie('connect.sid');
-          res.json({ success: true, warning: 'Could not revoke Google token, but logged out successfully.' });
-        });
-      });
-  } else {
-    // If no Google token, just destroy the session
-    req.session.destroy(err => {
-      if (err) {
-        return res.status(500).json({ error: 'Could not log out' });
+        req.session.googleToken = null; // Clear Google token after revocation
       }
-      res.clearCookie('connect.sid');
-      res.json({ success: true });
-    });
-  }
-});
+  
+      // Revoke the Facebook token if it exists
+      const facebookToken = req.session.fbToken;
+      if (facebookToken) {
+        const url = `https://graph.facebook.com/me/permissions?access_token=${facebookToken}`;
+        await fetch(url, { method: 'DELETE' });
+        req.session.fbToken = null; // Clear Facebook token after revocation
+      }
+  
+      // Destroy the session after token revocation
+      req.session.destroy(err => {
+        if (err) {
+          return res.status(500).json({ error: 'Could not log out' });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ success: true });
+      });
+    } catch (err) {
+      console.error('Error during logout:', err);
+      res.status(500).json({ error: 'Logout failed' });
+    }
+  });
+  
 
 
 app.use(`${BASE_PATH}/api/api211`, api211Routes);

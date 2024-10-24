@@ -214,20 +214,39 @@ router.get('/all', async (req, res) => {
   }
   try {
     const accessToken = await getFhirAccessToken();
-    const searchUrl = `${FHIR_BASE_URL}/Practitioner`;
-    const response = await axios.get(searchUrl, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`, // Use the getAccessToken function
-        Accept: 'application/fhir+json', // Ensure the request is FHIR-compliant
-      },
-    });
-    const practitioners = await handleBlobResponse(response.data);
-   // console.log('Fetched all practitioners:', JSON.stringify(practitioners));
-    res.json(practitioners);
+    let allPractitioners = [];
+    let nextUrl = `${FHIR_BASE_URL}/Practitioner`; // Initial search URL
+    let hasMorePages = true;
+
+    while (hasMorePages) {
+      const response = await axios.get(nextUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/fhir+json',
+        },
+      });
+
+      // Process the current page of practitioners
+      const currentPagePractitioners = await handleBlobResponse(response.data);
+      console.log ("Pract route currentPagePract:",JSON.stringify(currentPagePractitioners));
+
+      allPractitioners = [...allPractitioners, ...currentPagePractitioners.entry];
+
+      // Check if there's a next page
+      const nextLink = response.data?.link?.find(link => link.relation === 'next');
+      if (nextLink && nextLink.url) {
+        nextUrl = nextLink.url; // Move to the next page
+      } else {
+        hasMorePages = false; // No more pages
+      }
+    }
+
+    res.json(allPractitioners); // Return all practitioners
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch practitioners', details: error.message });
   }
 });
+
 
 // Delete a Practitioner by ID
 router.delete('/delete/:id', async (req, res) => {

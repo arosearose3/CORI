@@ -4,14 +4,16 @@ import dotenv from 'dotenv';
 
 dotenv.config(); // Load environment variables from .env file
 
-export const PROJECT_ID = 'combine-fhir-smart-store';
-export const LOCATION = 'us-central1';
-export const DATASET_ID = 'COMBINE-FHIR-v1';
-export const FHIR_STORE_ID = '1';
+export const PROJECT_ID = process.env.PROJECT_ID;
+export const LOCATION = process.env.LOCATION;
+export const DATASET_ID = process.env.DATASET_ID;
+export const FHIR_STORE_ID = process.env.FHIR_STORE_ID;
 
 export const healthcare = google.healthcare('v1');
 
-export const BASE_PATH = '/avail/prod'; // Define your base path here
+// Base path based on environment
+export const BASE_PATH = process.env.RUNTIME_ENV === 'prod' ? '/avail/prod' : '/avail/dev';
+
 
 // Initialize GoogleAuth with correct scopes
 export const auth = new GoogleAuth({
@@ -54,6 +56,23 @@ export const getAccessToken = async () => {
     console.error('Error obtaining Google Cloud access token:', error.message);
     throw new Error('Failed to get Google Cloud access token');
   }
+};
+
+// Function to redirect user to Google OAuth URL
+export const getGoogleAuthUrl = () => {
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    `${BASE_PATH}/auth/google/callback` // The callback URL
+  );
+
+  // Generate the Google OAuth2 URL
+  const authUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: ['https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email'],
+  });
+
+  return authUrl;
 };
 
 // Function to handle blob responses (for some APIs that return blob)

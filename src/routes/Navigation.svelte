@@ -3,23 +3,10 @@
   import { user, abilities } from '$lib/stores.js';
   import { base } from '$app/paths';
 
-  export let isUserAuthenticated;
-  export let handleLogin;
-  export let handleLogout;
-  export let handleConnectFhir;
-  export let handleDisconnectFhir;
-  export let isFhirAuthenticated;
-  export let fhirError;
-
-
-
-  // Determine if user has only one role
- // $: hasSingleRole = userRoles.length === 1;
-
+  // Reactive variables
   $: userData = $user;
   $: ability = $abilities;
   $: userRoles = userData?.practitioner?.roles ?? [];
-  $: isPractitionerRoleSelected = !!userData?.practitioner?.PRid;
   $: hasSingleRole = userRoles.length === 1;
 
   // Initialize the expanded/collapsed state for each role to false (collapsed by default)
@@ -51,40 +38,41 @@
 </script>
 
 <nav class="navigation">
-  <!-- Ensure conditions are met to trigger the each block -->
   {#if userRoles.length > 0 && ability.rules.length > 0}
     {#if hasSingleRole}
       <!-- Display nav items directly for single role -->
-      <div class="nav-links single-role">
+      <ul class="nav-list single-role">
         {#each navItems.filter(item => belongsToRole(item, userRoles[0])) as item}
-          <a class="nav-link" href={item.path} aria-label={item.label}>
-            {#if item.icon}
-              <span class="nav-icon">{item.icon}</span>
-            {/if}
-            {item.label}
-          </a>
+          <li class="nav-item">
+            <a class="nav-link" href={item.path} aria-label={item.label}>
+              {#if item.icon}
+                <span class="nav-icon">{item.icon}</span>
+              {/if}
+              {item.label}
+            </a>
+          </li>
         {/each}
-      </div>
+      </ul>
     {:else}
       <!-- Display collapsible sections for multiple roles -->
       {#each userRoles as role}
         <div class="role-section">
           <div class="role-header" on:click={() => toggleRole(role)}>
-            <span>{role}</span>
-            <span class="icon">{expandedRoles[role] ? '▲' : '▼'}</span> <!-- Toggle icon -->
+            <span class="role-title">{role}</span>
+            <span class="toggle-icon">{expandedRoles[role] ? '▲' : '▼'}</span>
           </div>
-          
-          <!-- Role-specific navigation items with animation -->
-          <div class="nav-links" class:expanded={expandedRoles[role]}>
+          <ul class="nav-list" class:expanded={expandedRoles[role]}>
             {#each navItems.filter(item => belongsToRole(item, role)) as item}
-              <a class="nav-link" href={item.path} aria-label={item.label}>
-                {#if item.icon}
-                  <span class="nav-icon">{item.icon}</span>
-                {/if}
-                {item.label}
-              </a>
+              <li class="nav-item">
+                <a class="nav-link" href={item.path} aria-label={item.label}>
+                  {#if item.icon}
+                    <span class="nav-icon">{item.icon}</span>
+                  {/if}
+                  {item.label}
+                </a>
+              </li>
             {/each}
-          </div>
+          </ul>
         </div>
       {/each}
     {/if}
@@ -96,62 +84,107 @@
     width: 100%;
   }
 
+  /* Role Section */
+  .role-section {
+    margin-bottom: 15px;
+  }
+
   /* Role Header */
   .role-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
-    padding: 10px 5px;
+    padding: 10px;
     font-weight: bold;
-    background-color: #f0f0f0;
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
     border-radius: 4px;
-    margin-bottom: 5px;
     transition: background-color 0.3s;
   }
 
   .role-header:hover {
-    background-color: #e0e0e0;
+    background-color: #e9ecef;
   }
 
-  /* Toggle icon */
-  .icon {
+  .role-title {
+    font-size: 16px;
+    color: #333;
+  }
+
+  .toggle-icon {
     font-size: 12px;
-    margin-left: 5px;
+    color: #666;
   }
 
-  /* Navigation links inside each role */
-  .nav-links {
+  /* Navigation List */
+  .nav-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
     opacity: 0;
   }
 
-  /* Expanded state for role's navigation links */
-  .nav-links.expanded {
-    max-height: 500px; /* Set a large enough value for the animation to work */
+  .nav-list.expanded {
+    max-height: 500px; /* Adjust as needed */
     opacity: 1;
   }
 
-  /* Single role nav links */
-  .nav-links.single-role {
+  .nav-list.single-role {
     max-height: none;
     opacity: 1;
   }
 
-  /* Each navigation link */
+  /* Navigation Item */
+  .nav-item {
+    margin-bottom: 5px;
+  }
+
+  /* Navigation Link */
   .nav-link {
-    display: block;
-    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
     text-decoration: none;
     color: #333;
     border-radius: 4px;
-    transition: background-color 0.3s;
+    transition: background-color 0.2s;
     font-size: 14px;
   }
 
   .nav-link:hover {
-    background-color: #e0e0e0;
+    background-color: #e9ecef;
+  }
+
+  /* Active link styling (if applicable) */
+  .nav-link.active {
+    background-color: #007bff;
+    color: #fff;
+  }
+
+  /* Navigation Icon */
+  .nav-icon {
+    margin-right: 8px;
+    font-size: 16px;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .role-header {
+      font-size: 14px;
+      padding: 8px;
+    }
+
+    .nav-link {
+      font-size: 13px;
+      padding: 6px 10px;
+    }
+
+    .nav-icon {
+      font-size: 14px;
+    }
   }
 </style>

@@ -27,28 +27,31 @@
     }
   }
 
-  function processPractitionerBundle(bundle) {
-    if (!bundle || !bundle.entry || !Array.isArray(bundle.entry)) {
-      return [];
-    }
-    
-    const practitioners = bundle.entry.map((entry) => {
-      const resource = entry.resource;
-      
-      if (resource && resource.resourceType === 'Practitioner') {
-        return {
-          id: resource.id || '',
-          name: resource.name || [],
-          telecom: resource.telecom || [],
-          gender: resource.gender || 'unknown',
-          birthDate: resource.birthDate || 'N/A',
-        };
-      }
-      return null;
-    }).filter(practitioner => practitioner !== null);
-
-    return practitioners;
+  function processPractitionerBundle(PArray) {
+  // Ensure PArray is an array
+  if (!Array.isArray(PArray)) {
+    return [];
   }
+
+  // Process the entries in the array
+  const practitioners = PArray.map((entry) => {
+    const resource = entry.resource;
+
+    // Check if the resource is a Practitioner and extract the necessary data
+    if (resource && resource.resourceType === 'Practitioner') {
+      return {
+        id: resource.id || '',
+        name: resource.name || [],
+        telecom: resource.telecom || [],
+        gender: resource.gender || 'unknown',
+        birthDate: resource.birthDate || 'N/A',
+      };
+    }
+    return null;
+  }).filter(practitioner => practitioner !== null); // Filter out null values
+
+  return practitioners;
+}
 
   function formatName(name) {
     if (!name || !name.length) return 'N/A';
