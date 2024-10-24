@@ -6,6 +6,7 @@ archive
 .vercel
 /.svelte-kit
 /build
+/archive
 
 # OS
 .DS_Store

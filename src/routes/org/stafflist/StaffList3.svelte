@@ -129,6 +129,7 @@
      
         // if the Practitioner has no email, no account estableshed yet,fetch the invite code
         var inviteCode = 'Unknown';
+        console.log ("stafflist3 fullname:",fullName," email:",email );
         if (email === 'Unknown') {
            inviteCode = await fetchInviteCode (practitionerId);
         } else {

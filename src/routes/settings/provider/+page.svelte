@@ -1,253 +1,464 @@
 <script>
   import { onMount } from 'svelte';
-  import { user } from '$lib/stores.js'; // Import the user store
-  import axios from 'axios'; // Use axios to make HTTP requests
-  import { fade } from 'svelte/transition'; // Svelte fade transition
+  import { user } from '$lib/stores.js';
+  import axios from 'axios';
+  import { fade } from 'svelte/transition';
   import { base } from '$app/paths';
 
-  let practitioner = {}; // Holds the Practitioner data
-  let smsNumber = '';
-  let dateOfBirth = '';
-  let npi = ''; // NPI is assumed to be in the 'identifier' field
-  let startTime = '09:00';
-  let endTime = '17:00';
-  let isSaveEnabled = false;
-  let isSaving = false; // Track if saving is in progress
-  let showMessage = false; // Track if the save message should be shown
-  let saveMessage = ''; // Message to show after saving
-  let smsChecked = false;
-  let limitTextingChecked = false;
+  let state = {
+    isLoading: true,
+    isSaving: false,
+    hasChanges: false,
+    error: null,
+    message: null
+  };
 
+  let formData = {
+    smsEnabled: false,
+    smsNumber: '',
+    limitTexting: false,
+    startTime: '09:00',
+    endTime: '17:00',
+    dateOfBirth: '',
+    npi: ''
+  };
 
-  const practitionerId = $user.practitioner.Pid; // Get the Practitioner ID from the user store
-  const BASE_URL = `${base}/api/practitioner`; // Your API base URL
+  let originalData = { ...formData };
+  let existingPractitionerData = null; // Hold the full practitioner resource
 
-  // Fetch the Practitioner data on mount
-  onMount(async () => {
-    try {
-      const response = await axios.get(`${BASE_URL}/${practitionerId}`);
-      const practitionerResource = response.data || {};
+  let validation = {
+    smsNumber: { isValid: true, message: '' },
+    npi: { isValid: true, message: '' }
+  };
 
-      // Load the practitioner data
-      dateOfBirth = practitionerResource.birthDate || '';
-      
-      // Check for NPI in identifier (if exists)
-      if (practitionerResource.identifier) {
-        const npiIdentifier = practitionerResource.identifier.find(id => id.system === 'http://hl7.org/fhir/sid/us-npi');
-        npi = npiIdentifier ? npiIdentifier.value : '';
-      }
-
-      // Check for phone number in telecom
-      if (practitionerResource.telecom) {
-        const phoneTelecom = practitionerResource.telecom.find(t => t.system === 'phone');
-        smsNumber = phoneTelecom ? phoneTelecom.value : '';
-      }
-
-    } catch (error) {
-      console.error('Failed to load practitioner data:', error);
-    }
-  });
-
-  function enableSave() {
-    isSaveEnabled = true;
-  }
-
-  function updateSMS(event) {
-    smsNumber = event.target.value;
-    enableSave();
-  }
-
-  function updateDOB(event) {
-    dateOfBirth = event.target.value;
-    enableSave();
-  }
-
-  function updateNPI(event) {
-    npi = event.target.value;
-    enableSave();
-  }
-
-  function changedStartTime() {
-    enableSave();
-  }
-
-  function changedEndTime() {
-    enableSave();
-  }
-
-  // Function to handle Save
-  async function handleSave() {
-    try {
-      // Show "Saving..." on the button
-      isSaving = true;
-      saveMessage = ''; // Clear any previous message
-
-      // Prepare the updated Practitioner object based on the existing one
-      const practitionerResource = {
-        ...practitioner, // Use the existing practitioner object
-        birthDate: dateOfBirth, // Update the birthDate
-        telecom: practitioner.telecom.map(t => t.system === 'phone' ? { ...t, value: smsNumber } : t),
-        identifier: practitioner.identifier.map(id => id.system === 'http://hl7.org/fhir/sid/us-npi' ? { ...id, value: npi } : id)
-      };
-
-      // Send the updated Practitioner object to the backend
-      const response = await axios.put(`${BASE_URL}/update/${practitionerId}`, practitionerResource);
-      console.log('Practitioner updated successfully:', response.data);
-
-      // Update the user store for sms, dob, and npi
-      user.update(store => {
-        store.practitioner.sms = smsNumber;
-        store.practitioner.dob = dateOfBirth;
-        store.practitioner.npi = npi;
-        return store;
-      });
-
-      // Show "Saved" on the button
-      isSaveEnabled = false;
-      saveMessage = 'Saved';
-      showMessage = true;
-
-      // Hide the message after 2 seconds
-      setTimeout(() => {
-        showMessage = false;
-      }, 2000);
-
-      // Reset Save button state after saving
-      isSaving = false;
-    } catch (error) {
-      console.error('Failed to update practitioner:', error);
-      saveMessage = 'Failed to Save';
-      showMessage = true;
-      isSaving = false;
-    }
-  }
+  const NPI_REGEX = /^\d{10}$/;
+  const PHONE_REGEX = /^\+?1?\d{10}$/;
+  const BASE_URL = `${base}/api/practitioner`;
+  const practitionerId = $user?.practitioner?.Pid;
 
   const timeOptions = [
-    { value: '06:00', label: '6 am' }, { value: '07:00', label: '7 am' },
-    { value: '08:00', label: '8 am' }, { value: '09:00', label: '9 am' },
-    { value: '10:00', label: '10 am' }, { value: '11:00', label: '11 am' },
-    { value: '12:00', label: '12 noon' }, { value: '13:00', label: '1 pm' },
-    { value: '14:00', label: '2 pm' }, { value: '15:00', label: '3 pm' },
-    { value: '16:00', label: '4 pm' }, { value: '17:00', label: '5 pm' },
-    { value: '18:00', label: '6 pm' }, { value: '19:00', label: '7 pm' },
-    { value: '20:00', label: '8 pm' }, { value: '21:00', label: '9 pm' },
-    { value: '22:00', label: '10 pm' }
-  ];
+  { value: '07:00', label: '7 am' },
+  { value: '08:00', label: '8 am' },
+  { value: '09:00', label: '9 am' },
+  { value: '10:00', label: '10 am' },
+  { value: '11:00', label: '11 am' },
+  { value: '12:00', label: '12 pm' },
+  { value: '13:00', label: '1 pm' },
+  { value: '14:00', label: '2 pm' },
+  { value: '15:00', label: '3 pm' },
+  { value: '16:00', label: '4 pm' },
+  { value: '17:00', label: '5 pm' },
+  { value: '18:00', label: '6 pm' },
+  { value: '19:00', label: '7 pm' },
+  { value: '20:00', label: '8 pm' },
+  { value: '21:00', label: '9 pm' }
+];
+
+  function validateSmsNumber(number) {
+    if (!number) return { isValid: true, message: '' };
+    const isValid = PHONE_REGEX.test(number.replace(/\D/g, ''));
+    return {
+      isValid,
+      message: isValid ? '' : 'Please enter a valid 10-digit phone number'
+    };
+  }
+
+  function validateNPI(npi) {
+    if (!npi) return { isValid: true, message: '' };
+    const isValid = NPI_REGEX.test(npi);
+    return {
+      isValid,
+      message: isValid ? '' : 'NPI must be exactly 10 digits'
+    };
+  }
+
+  $: isFormValid = validation.smsNumber.isValid && validation.npi.isValid;
+
+  function formatPhoneNumber(input) {
+    const cleaned = input.replace(/\D/g, '');
+    const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
+    if (match) {
+      return `(${match[1]}) ${match[2]}-${match[3]}`;
+    }
+    return input;
+  }
+
+  function handleChange() {
+    state.hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
+
+    validation.smsNumber = validateSmsNumber(formData.smsNumber);
+    validation.npi = validateNPI(formData.npi);
+  }
+
+  async function loadPractitionerData() {
+    try {
+      state.isLoading = true;
+      state.error = null;
+
+      if (!practitionerId) {
+        throw new Error('No practitioner ID found');
+      }
+
+      const response = await axios.get(`${BASE_URL}/${practitionerId}`);
+      const data = response.data;
+      existingPractitionerData = data; // Save the full Practitioner resource
+
+      formData = {
+        smsEnabled: data.telecom?.some(t => t.system === 'phone'),
+        smsNumber: data.telecom?.find(t => t.system === 'phone')?.value || '',
+        limitTexting: data.extension?.some(e => e.url === 'https://combinebh.org/cori-value-set-texting-limits'),
+        startTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-start')?.valueTime || '09:00',
+        endTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-end')?.valueTime || '17:00',
+        dateOfBirth: data.birthDate || '',
+        npi: data.identifier?.find(id => id.system === 'http://hl7.org/fhir/sid/us-npi')?.value || ''
+      };
+
+      originalData = { ...formData };
+      
+    } catch (error) {
+      state.error = error.response?.data?.message || 'Failed to load practitioner data';
+      console.error('Load error:', error);
+    } finally {
+      state.isLoading = false;
+    }
+  }
+
+  // Add seconds to the time format if not already present
+  function formatTime(time) {
+    return time.includes(':') ? `${time}:00` : time;
+  }
+
+  async function handleSave() {
+    try {
+      state.isSaving = true;
+      state.error = null;
+
+      // Fetch the current practitioner data before update to avoid clobbering other fields
+      if (!existingPractitionerData) {
+        throw new Error('No existing practitioner data found');
+      }
+
+      // Merge form data into the full practitioner resource
+      const updatedPractitionerResource = {
+        ...existingPractitionerData, // Include all original practitioner fields
+        identifier: formData.npi ? [
+          {
+            system: 'http://hl7.org/fhir/sid/us-npi',
+            value: formData.npi
+          }
+        ] : existingPractitionerData.identifier || [],
+        telecom: formData.smsEnabled && formData.smsNumber ? [
+          {
+            system: 'phone',
+            value: formData.smsNumber,
+            use: 'mobile'
+          }
+        ] : existingPractitionerData.telecom || [],
+        birthDate: formData.dateOfBirth || existingPractitionerData.birthDate,
+        extension: [
+          {
+            url: 'https://combinebh.org/cori-value-set-texting-limits',
+            valueBoolean: formData.limitTexting
+          },
+          {
+            url: 'https://combinebh.org/cori-value-set-texting-start',
+            valueTime: formatTime(formData.startTime)
+          },
+          {
+            url: 'https://combinebh.org/cori-value-set-texting-end',
+            valueTime: formatTime(formData.endTime)
+          },
+          ...existingPractitionerData.extension.filter(
+            ext => ![
+              'https://combinebh.org/cori-value-set-texting-limits',
+              'https://combinebh.org/cori-value-set-texting-start',
+              'https://combinebh.org/cori-value-set-texting-end'
+            ].includes(ext.url)
+          )
+        ]
+      };
+
+      await axios.put(`${BASE_URL}/update/${practitionerId}`, updatedPractitionerResource);
+
+      user.update(store => ({
+        ...store,
+        practitioner: {
+          ...store.practitioner,
+          smsNumber: formData.smsNumber,
+          dateOfBirth: formData.dateOfBirth,
+          npi: formData.npi
+        }
+      }));
+
+      state.message = 'Settings saved successfully';
+      originalData = { ...formData };
+      state.hasChanges = false;
+
+      setTimeout(() => {
+        state.message = null;
+      }, 3000);
+
+    } catch (error) {
+      state.error = error.response?.data?.message || 'Failed to save changes';
+      console.error('Save error:', error);
+    } finally {
+      state.isSaving = false;
+    }
+  }
+
+  onMount(loadPractitionerData);
 </script>
 
+
 <div class="provider-settings">
-  <h3>Provider Settings</h3>
+  {#if state.isLoading}
+    <div class="loading">Loading settings...</div>
+  {:else if state.error}
+    <div class="error" transition:fade>
+      {state.error}
+      <button class="close-error" on:click={() => state.error = null}>×</button>
+    </div>
+  {:else}
+    <h3>Provider Settings</h3>
 
-  <h4>Notification Preferences</h4>
+    <form on:submit|preventDefault={handleSave}>
+      <section class="preferences">
+        <h4>Notification Preferences</h4>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input 
+              type="checkbox" 
+              bind:checked={formData.smsEnabled}
+              on:change={handleChange}
+            >
+            Enable Text Messages
+          </label>
 
-  <div class="preference">
-    <label>
-      <input type="checkbox" bind:checked={smsChecked}>
-      Text Messages
-    </label>
-    {#if smsChecked}
-      <input
-        type="tel"
-        placeholder="Phone number"
-        value={smsNumber}
-        on:input={updateSMS}
-      >
-      
-      <div class="preference limit-texting">
-        <label>
-          <input type="checkbox" bind:checked={limitTextingChecked}>
-          <span class:greyed-out={!limitTextingChecked}>Limit Texting From</span>
-        </label>
-        <select
-          bind:value={startTime}
-          on:change={changedStartTime}
-          disabled={!limitTextingChecked}
+          {#if formData.smsEnabled}
+            <div class="sms-settings" transition:fade>
+              <input
+                type="tel"
+                placeholder="(555) 555-5555"
+                value={formData.smsNumber}
+                class:invalid={!validation.smsNumber.isValid}
+                on:input={e => {
+                  formData.smsNumber = formatPhoneNumber(e.target.value);
+                  handleChange();
+                }}
+              />
+              {#if !validation.smsNumber.isValid}
+                <span class="validation-message">{validation.smsNumber.message}</span>
+              {/if}
+
+              <div class="time-limits">
+                <label class="checkbox-label">
+                  <input 
+                    type="checkbox" 
+                    bind:checked={formData.limitTexting}
+                    on:change={handleChange}
+                  >
+                  Limit Texting Hours
+                </label>
+
+                {#if formData.limitTexting}
+                  <div class="time-selectors" transition:fade>
+                    <select
+                      bind:value={formData.startTime}
+                      on:change={handleChange}
+                    >
+                      {#each timeOptions as time}
+                        <option value={time.value}>{time.label}</option>
+                      {/each}
+                    </select>
+                    <span>to</span>
+                    <select
+                      bind:value={formData.endTime}
+                      on:change={handleChange}
+                    >
+                      {#each timeOptions as time}
+                        <option value={time.value}>{time.label}</option>
+                      {/each}
+                    </select>
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {/if}
+        </div>
+      </section>
+
+      <section class="identity">
+        <h4>Provider Information</h4>
+        
+        <div class="form-group">
+          <label for="dob">Date of Birth</label>
+          <input
+            type="date"
+            id="dob"
+            bind:value={formData.dateOfBirth}
+            on:change={handleChange}
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="npi">NPI Number</label>
+          <input
+            type="text"
+            id="npi"
+            bind:value={formData.npi}
+            class:invalid={!validation.npi.isValid}
+            on:input={handleChange}
+          />
+          {#if !validation.npi.isValid}
+            <span class="validation-message">{validation.npi.message}</span>
+          {/if}
+        </div>
+      </section>
+
+      <div class="form-actions">
+        <button
+          type="submit"
+          class="save-button"
+          disabled={!state.hasChanges || !isFormValid || state.isSaving}
         >
-          {#each timeOptions.slice(0, -2) as time}
-            <option value={time.value}>{time.label}</option>
-          {/each}
-        </select>
-        <span class:greyed-out={!limitTextingChecked}>to</span>
-        <select
-          bind:value={endTime}
-          on:change={changedEndTime}
-          disabled={!limitTextingChecked}
-        >
-          {#each timeOptions.slice(2) as time}
-            <option value={time.value}>{time.label}</option>
-          {/each}
-        </select>
+          {state.isSaving ? 'Saving...' : 'Save Changes'}
+        </button>
+
+        {#if state.message}
+          <span class="success-message" transition:fade>{state.message}</span>
+        {/if}
       </div>
-    {/if}
-  </div>
-
-  <h4>Date of Birth</h4>
-  <div class="preference">
-    <label for="dob">Date of Birth:</label>
-    <input
-      type="date"
-      id="dob"
-      value={dateOfBirth}
-      on:change={updateDOB}
-    >
-  </div>
-
-  <h4>National Provider Identifier (NPI)</h4>
-  <div class="preference">
-    <label for="npi">NPI:</label>
-    <input
-      type="text"
-      id="npi"
-      value={npi}
-      on:input={updateNPI}
-    >
-  </div>
-
-  <!-- Save Button -->
-  <div class="preference">
-    <button
-      class="save-button"
-      on:click={handleSave}
-      disabled={!isSaveEnabled || isSaving}
-    >
-      {isSaving ? 'Saving...' : 'Save'}
-    </button>
-
-    {#if showMessage}
-      <p class="save-message" transition:fade>{saveMessage}</p>
-    {/if}
-  </div>
+    </form>
+  {/if}
 </div>
 
 <style>
-  /* Styles */
+  .provider-settings {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  section {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    border: 1px solid #eee;
+    border-radius: 4px;
+  }
+
+  h3 {
+    margin-bottom: 1.5rem;
+    color: #333;
+  }
+
+  h4 {
+    margin-bottom: 1rem;
+    color: #666;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #555;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  input[type="text"],
+  input[type="tel"],
+  input[type="date"],
+  select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+
+  input.invalid {
+    border-color: #dc3545;
+  }
+
+  .validation-message {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+
+  .time-selectors {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .time-selectors select {
+    width: auto;
+  }
+
+  .form-actions {
+    margin-top: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
   .save-button {
-    padding: 10px 20px;
+    padding: 0.75rem 1.5rem;
     background-color: #007bff;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    opacity: 0.5; /* Dim the button initially */
-    transition: opacity 0.3s ease;
-  }
-
-  .save-button:enabled {
-    opacity: 1; /* Brighten the button when enabled */
+    font-size: 1rem;
+    transition: all 0.2s ease;
   }
 
   .save-button:disabled {
+    background-color: #ccc;
     cursor: not-allowed;
   }
 
-  .save-message {
-    margin-top: 10px;
-    color: green;
-    animation: fadeout 2s forwards;
+  .save-button:not(:disabled):hover {
+    background-color: #0056b3;
   }
 
-  @keyframes fadeout {
-    0% { opacity: 1; }
-    100% { opacity: 0; visibility: hidden; }
+  .success-message {
+    color: #28a745;
+  }
+
+  .error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .close-error {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 0.5rem;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
   }
 </style>
