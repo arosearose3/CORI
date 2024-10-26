@@ -8,7 +8,85 @@ const FHIR_BASE_URL = `https://healthcare.googleapis.com/v1/projects/${PROJECT_I
 import { auth, healthcare, PROJECT_ID, LOCATION, DATASET_ID, FHIR_STORE_ID, handleBlobResponse } from '../serverutils.js';
 
 
+/**
+ * Creates a new PractitionerRole linking a Practitioner to an Organization
+ * @param {string} practitionerId - The ID of the practitioner
+ * @param {string} organizationId - The ID of the organization
+ * @returns {Promise<Object>} The created PractitionerRole resource
+ * @throws {Error} If required parameters are missing or if creation fails
+ */
+export async function service_createPractitionerRole(practitionerId, organizationId) {
+  if (!practitionerId) {
+    throw new Error('Practitioner ID is required');
+  }
+  if (!organizationId) {
+    throw new Error('Organization ID is required');
+  }
 
+  try {
+    // Construct the FHIR PractitionerRole resource
+    const practitionerRoleResource = {
+      resourceType: 'PractitionerRole',
+      practitioner: { reference: `Practitioner/${practitionerId}` },
+      organization: { reference: `Organization/${organizationId}` },
+      active: true
+    };
+
+    // Get access token for FHIR API
+    const accessToken = await getFhirAccessToken();
+    if (!accessToken) {
+      throw new Error('Failed to obtain access token');
+    }
+
+    const createUrl = `${FHIR_BASE_URL}/PractitionerRole`;
+    console.log('Creating PractitionerRole:', JSON.stringify(practitionerRoleResource, null, 2));
+
+    const response = await axios.post(createUrl, practitionerRoleResource, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/fhir+json',
+        Accept: 'application/fhir+json'
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error in createPractitionerRole service:', error);
+    throw new Error(`Failed to create PractitionerRole: ${error.message}`);
+  }
+}
+
+
+
+/**
+ * Fetches PractitionerRoles for a given practitioner ID
+ * @param {string} practitionerId - The ID of the practitioner
+ * @returns {Promise<Object>} The PractitionerRole resources
+ * @throws {Error} If practitionerId is missing or if fetching fails
+ */
+export async function service_getPractitionerRoles(practitionerId) {
+  if (!practitionerId) {
+    throw new Error('Practitioner reference is required.');
+  }
+
+  try {
+    const searchUrl = `${FHIR_BASE_URL}/PractitionerRole?practitioner=${practitionerId}`;
+    const accessToken = await getFhirAccessToken();
+
+    const response = await axios.get(searchUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/fhir+json',
+      },
+    });
+
+    const practitionerRoles = await handleBlobResponse(response.data);
+    return practitionerRoles;
+  } catch (error) {
+    console.error('Error fetching PractitionerRoles:', error);
+    throw new Error(`Failed to fetch PractitionerRoles: ${error.message}`);
+  }
+}
 
 /**
  * Fetches PractitionerRoles for a given organization from the FHIR server.
@@ -42,4 +120,103 @@ export async function service_getPractitionerRolesByOrganization(organizationId)
   }
 }
 
+
+
+/**
+ * Finds an existing PractitionerRole for a practitioner and organization
+ * @param {string} practitionerId - The practitioner ID
+ * @param {string} organizationId - The organization ID
+ * @returns {Promise<string|null>} The PractitionerRole ID if found, null otherwise
+ */
+export async function service_findExistingPractitionerRole(practitionerId, organizationId) {
+  const accessToken = await getFhirAccessToken();
+  
+  try {
+    const findResponse = await axios.get(`${FHIR_BASE_URL}/PractitionerRole`, {
+      params: { 
+        practitioner: `Practitioner/${practitionerId}`,
+        organization: `Organization/${organizationId}`
+      },
+      headers: { 
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/fhir+json'
+      },
+    });
+
+    const bundle = await handleBlobResponse(findResponse.data);
+    const matchingRole = bundle.entry?.find(entry => 
+      entry.resource.practitioner?.reference === `Practitioner/${practitionerId}` &&
+      entry.resource.organization?.reference === `Organization/${organizationId}`
+    );
+
+    return matchingRole?.resource.id || null;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      return null;
+    }
+    throw new Error(`Failed to find PractitionerRole: ${error.message}`);
+  }
+}
+
+/**
+ * Patches an existing PractitionerRole with new roles
+ * @param {string} roleId - The PractitionerRole ID
+ * @param {string[]} roles - Array of role codes
+ * @returns {Promise<Object>} The updated PractitionerRole
+ */
+export async function service_patchPractitionerRole(roleId, roles) {
+  console.log ("in service_patchPrRole roleId:", roleId, " roles:", roles);
+  const accessToken = await getFhirAccessToken();
+  const patchResource = [
+    {
+      op: 'replace',
+      path: '/code',
+      value: roles.map(role => ({
+        coding: [{ system: 'https://combinebh.org/cori-value-set/', code: role }],
+      })),
+    },
+  ];
+
+  const patchUrl = `${FHIR_BASE_URL}/PractitionerRole/${roleId}`;
+  
+  const response = await axios.patch(patchUrl, patchResource, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json-patch+json',
+      Accept: 'application/fhir+json',
+    },
+  });
+
+  return response.data;
+}
+
+
+/**
+ * Main service function to update or create PractitionerRole with roles
+ */
+export async function service_updatePractitionerRoles(practitionerRef, organizationRef, roles) {
+  if (!practitionerRef || !organizationRef || !Array.isArray(roles)) {
+    throw new Error('Practitioner reference, Organization reference, and roles array are required');
+  }
+
+  const practitionerId = practitionerRef.reference.replace('Practitioner/', '');
+  const organizationId = organizationRef.reference.replace('Organization/', '');
+
+  // Find existing role
+  const existingRoleId = await service_findExistingPractitionerRole(practitionerId, organizationId);
+
+  if (existingRoleId) {
+    // Update existing role
+    return {
+      action: 'patched',
+      data: await service_patchPractitionerRole(existingRoleId, roles)
+    };
+  } else {
+    // Create new role
+    return {
+      action: 'created',
+      data: await service_createPractitionerRole(practitionerId, organizationId, roles)
+    };
+  }
+}
 

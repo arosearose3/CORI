@@ -415,7 +415,7 @@ function selectPractitionerRole(selectedRole, orgName) {
 
 async function handleInviteCode(event) {
   const { inviteCode } = event.detail;
-  console.log('Processing invite code:', inviteCode);
+  console.log('Processing-2 invite code:', inviteCode,"name:", $user?.user?.name);
   
   try {
     const response = await fetch(`${base}/api/practitioner/updateEmailFromCode`, {
@@ -424,8 +424,10 @@ async function handleInviteCode(event) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        namestring : $user?.user?.name,
         code: inviteCode,
-        email: $user?.user?.email
+        email: $user?.user?.email,
+        
       }),
       credentials: 'include'
     });
