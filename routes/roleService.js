@@ -165,30 +165,81 @@ export async function service_findExistingPractitionerRole(practitionerId, organ
  * @returns {Promise<Object>} The updated PractitionerRole
  */
 export async function service_patchPractitionerRole(roleId, roles) {
-  console.log ("in service_patchPrRole roleId:", roleId, " roles:", roles);
-  const accessToken = await getFhirAccessToken();
-  const patchResource = [
-    {
-      op: 'replace',
-      path: '/code',
-      value: roles.map(role => ({
-        coding: [{ system: 'https://combinebh.org/cori-value-set/', code: role }],
-      })),
-    },
-  ];
+  console.log("Entering service_patchPrRole with roleId:", roleId, "and roles:", roles);
 
-  const patchUrl = `${FHIR_BASE_URL}/PractitionerRole/${roleId}`;
-  
-  const response = await axios.patch(patchUrl, patchResource, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json-patch+json',
-      Accept: 'application/fhir+json',
-    },
-  });
+  let accessToken;
+  let existingRoleResponse;
+  let patchResource;
+  let patchUrl;
+  let patchResponse;
 
-  return response.data;
+  try {
+    // Step 1: Get FHIR Access Token
+    console.log("Attempting to fetch FHIR access token...");
+    accessToken = await getFhirAccessToken();
+    console.log("Successfully fetched access token.");
+
+    // Step 2: Fetch the current PractitionerRole resource
+    const existingRoleUrl = `${FHIR_BASE_URL}/PractitionerRole/${roleId.id}`;
+    console.log("Fetching PractitionerRole from URL:", existingRoleUrl);
+    
+    existingRoleResponse = await axios.get(existingRoleUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/fhir+json',
+      },
+    });
+    console.log("Successfully fetched PractitionerRole resource.");
+
+  } catch (error) {
+    console.error("Error fetching PractitionerRole resource:", error.response?.data || error.message);
+    throw new Error(`Failed to fetch PractitionerRole resource: ${error.response?.data?.issue?.[0]?.diagnostics || error.message}`);
+  }
+
+  try {
+    const practitionerRole = existingRoleResponse.data;
+    const hasExistingCodes = practitionerRole.code && Array.isArray(practitionerRole.code);
+    console.log("PractitionerRole resource:", practitionerRole, "Has existing codes:", hasExistingCodes);
+
+    // Step 3: Build the patch operation
+    patchResource = [
+      {
+        op: hasExistingCodes ? 'replace' : 'add', // Use 'add' if no existing code, otherwise 'replace'
+        path: '/code',
+        value: roles.map(role => ({
+          coding: [{ system: 'https://combinebh.org/cori-value-set/', code: role }],
+        })),
+      },
+    ];
+    console.log("Patch resource to be sent:", JSON.stringify(patchResource, null, 2));
+
+  } catch (error) {
+    console.error("Error processing PractitionerRole resource or building patch resource:", error.message);
+    throw new Error(`Failed to process PractitionerRole resource: ${error.message}`);
+  }
+
+  try {
+    // Step 4: Patch the PractitionerRole resource with the new roles
+    patchUrl = `${FHIR_BASE_URL}/PractitionerRole/${roleId.id}`;
+    console.log("Patching PractitionerRole at URL:", patchUrl);
+
+    patchResponse = await axios.patch(patchUrl, patchResource, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json-patch+json',
+        Accept: 'application/fhir+json',
+      },
+    });
+    console.log("Patch response:", patchResponse.data);
+
+    return patchResponse.data;
+
+  } catch (error) {
+    console.error("Error patching PractitionerRole resource:", error.response?.data || error.message);
+    throw new Error(`Failed to patch PractitionerRole resource: ${error.response?.data?.issue?.[0]?.diagnostics || error.message}`);
+  }
 }
+
 
 
 /**

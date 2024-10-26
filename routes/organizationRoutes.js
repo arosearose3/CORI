@@ -8,6 +8,9 @@ import {UserAdminCodes} from './userAdminCodes.js';
 import { BASE_PATH } from '../serverutils.js'; // Adjust the path as necessary
 
 import { service_extractOrganizations} from './organizationService.js';  
+import { service_updateOrganization } from './organizationService.js'; // Import the service function
+
+
 
 const router = express.Router();
 const FHIR_BASE_URL = `https://healthcare.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}/fhir`;
@@ -61,7 +64,7 @@ router.post('/add', async (req, res) => {
 
 
 
-// Updated /all endpoint to handle pagination
+// handles pagination
 router.get('/all', async (req, res) => {
   // ... (authentication and initial setup)
 
@@ -249,5 +252,50 @@ router.delete('/:organizationId', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete Organization', details: error.message });
   }
 });
+
+
+
+
+/**
+ * HTTP Route to update an Organization resource.
+ * @route PUT /api/organization/update/:organizationId
+ * @param {string} organizationId - The ID of the Organization to update.
+ * @param {Object} req.body - The updated Organization resource data.
+ * @returns {Object} - JSON response with the updated Organization data or an error message.
+ */
+router.put('/update/:organizationId', async (req, res) => {
+  const { organizationId } = req.params;
+  const updatedOrganizationData = req.body;
+
+  // Validate Organization ID
+  if (!organizationId) {
+    return res.status(400).json({ error: 'Organization ID is required.' });
+  }
+
+  // Validate Organization data
+  if (!updatedOrganizationData || typeof updatedOrganizationData !== 'object') {
+    return res.status(400).json({ error: 'Invalid organization data.' });
+  }
+
+  try {
+    // Call the service function to update the organization
+    const updatedOrganization = await service_updateOrganization(organizationId, updatedOrganizationData);
+    
+    // Return the updated organization data as the response
+    res.status(200).json({
+      message: 'Organization updated successfully',
+      data: updatedOrganization
+    });
+  } catch (error) {
+    // Handle any errors and return an appropriate response
+    console.error('HTTP Route: Error updating Organization:', error.message || error.response?.data);
+    res.status(500).json({
+      error: 'Failed to update Organization',
+      details: error.message || error.response?.data
+    });
+  }
+});
+
+
 
 export default router;

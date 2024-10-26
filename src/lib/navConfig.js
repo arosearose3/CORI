@@ -56,14 +56,14 @@ export const navItems = [
     icon: '⚙️',
     path: `${base}/staff/admin`,
     subject: 'Cori Staff',
-    roles: ['admin',], // Accessible only by admin
+    roles: ['admin','provider'], // Accessible only by admin
   },
   {
     label: 'All Cori Organizations',
     icon: '🛠️',
     path: `${base}/admin/organizations`,
     subject: 'Admin',
-    roles: ['admin'], // Accessible only by admin
+    roles: ['admin','provider'], // Accessible only by admin
 
   },
   {

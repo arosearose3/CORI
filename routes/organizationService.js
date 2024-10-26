@@ -38,3 +38,37 @@ export async function service_extractOrganizations(url, accessToken) {
   
     return organizations;
   }
+
+
+/**
+ * Service to update an Organization resource in the FHIR store.
+ * @param {string} organizationId - The ID of the Organization to update.
+ * @param {Object} updatedOrganizationData - The updated Organization resource data.
+ * @returns {Object} - The updated Organization resource from the FHIR store.
+ * @throws {Error} - Throws an error if the update fails.
+ */
+export async function service_updateOrganization(organizationId, updatedOrganizationData) {
+  try {
+    const accessToken = await getFhirAccessToken();
+    const updateUrl = `${FHIR_BASE_URL}/Organization/${organizationId}`;
+    
+    console.log("Service: Updating Organization at URL:", updateUrl);
+    console.log("Service: Organization update data:", JSON.stringify(updatedOrganizationData));
+
+    // Perform the update request
+    const updateResponse = await axios.put(updateUrl, updatedOrganizationData, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/fhir+json',
+        Accept: 'application/fhir+json',
+      },
+    });
+
+    console.log("Service: Updated organization data received:", updateResponse.data);
+    return updateResponse.data;
+  } catch (error) {
+    console.error('Service: Error updating Organization:', error.message || error.response?.data);
+    throw new Error(`Failed to update Organization: ${error.message || error.response?.data}`);
+  }
+}
+

@@ -33,85 +33,96 @@
     }));
   
     async function handleSubmit() {
-      loading = true;
-      errorMessage = '';
-      successMessage = '';
-  
-      try {
-        // Step 1: Update Practitioner data
-        const updatedPractitionerData = {
-          name: [
-            {
-              family: lastName,
-              given: [firstName],
-              use: 'official'
-            }
-          ],
-          birthDate: dob,
-          telecom: [
-            { system: 'email', value: email },
-            { system: 'phone', value: phone }
-          ],
-          identifier: [
-            { system: 'http://hl7.org/fhir/sid/us-npi', value: npi }
-          ]
-        };
-  
-        const updatePractitionerResponse = await fetch(`${base}/api/practitioner/update/${practitioner.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatedPractitionerData)
-        });
-  
-        if (!updatePractitionerResponse.ok) {
-          const result = await updatePractitionerResponse.json();
-          throw new Error(`Failed to update practitioner: ${result.error || 'Unknown error'}`);
-        }
-  
-        // Step 2: Update PractitionerRole (patch roles)
-        const selectedRoles = roles.filter(role => role.selected).map(role => role.code);
-  
-        if (selectedRoles.length === 0) {
-          throw new Error('Please select at least one role.');
-        }
-  
-              // Get the organization ID from the user store
-        const organizationId = $user.practitioner.organizationId;
+  loading = true;
+  errorMessage = '';
+  successMessage = '';
 
-        const updatedPractitionerRoleData = {
-          practitioner: { reference: `Practitioner/${practitioner.id}` },
-          organization: { reference: `Organization/${organizationId}` },
-          roles: selectedRoles,
-        };
-  
-        const updateRoleResponse = await fetch(`${base}/api/role/patchRoles`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...updatedPractitionerRoleData,
-            id: practitionerRoleId // Include the PractitionerRole ID for updating
-          })
-        });
-  
-        if (!updateRoleResponse.ok) {
-          const result = await updateRoleResponse.json();
-          throw new Error(`Failed to update practitioner roles: ${result.error || 'Unknown error'}`);
-        }
-  
-        successMessage = 'Practitioner and roles updated successfully.';
-        dispatch('close');
-      } catch (error) {
-        console.error('Error updating practitioner:', error);
-        errorMessage = error.message || 'An error occurred. Please try again.';
-      } finally {
-        loading = false;
-      }
+  try {
+    // Step 1: Fetch the current practitioner data before update
+    const currentPractitionerDataResponse = await fetch(`${base}/api/practitioner/${practitioner.id}`);
+    const currentPractitionerData = await currentPractitionerDataResponse.json();
+    
+    if (!currentPractitionerDataResponse.ok) {
+      throw new Error(`Failed to load current practitioner data: ${currentPractitionerData.error || 'Unknown error'}`);
     }
-  
+
+    // Step 2: Merge the UI form data into the existing practitioner resource
+    const updatedPractitionerData = {
+      ...currentPractitionerData, // Preserve all current fields
+      name: [
+        {
+          family: lastName,
+          given: [firstName],
+          use: 'official'
+        }
+      ],
+      birthDate: dob || currentPractitionerData.birthDate, // Use existing if dob is unchanged
+      telecom: [
+        ...currentPractitionerData.telecom?.filter(t => !['email', 'phone'].includes(t.system)) || [], // Keep other telecoms
+        { system: 'email', value: email || currentPractitionerData.telecom?.find(t => t.system === 'email')?.value || '' }, // Preserve email if not changed
+        { system: 'phone', value: phone || currentPractitionerData.telecom?.find(t => t.system === 'phone')?.value || '' }  // Preserve phone if not changed
+      ],
+      identifier: [
+        ...currentPractitionerData.identifier?.filter(id => id.system !== 'http://hl7.org/fhir/sid/us-npi') || [], // Preserve other identifiers
+        { system: 'http://hl7.org/fhir/sid/us-npi', value: npi || currentPractitionerData.identifier?.find(id => id.system === 'http://hl7.org/fhir/sid/us-npi')?.value || '' } // Preserve NPI if not changed
+      ]
+    };
+
+    // Step 3: Update Practitioner resource
+    const updatePractitionerResponse = await fetch(`${base}/api/practitioner/update/${practitioner.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedPractitionerData)
+    });
+
+    if (!updatePractitionerResponse.ok) {
+      const result = await updatePractitionerResponse.json();
+      throw new Error(`Failed to update practitioner: ${result.error || 'Unknown error'}`);
+    }
+
+    // Step 4: Update PractitionerRole (patch roles)
+    const selectedRoles = roles.filter(role => role.selected).map(role => role.code);
+    
+    if (selectedRoles.length === 0) {
+      throw new Error('Please select at least one role.');
+    }
+
+    const organizationId = $user.practitioner.organizationId;
+    
+    const updatedPractitionerRoleData = {
+      practitioner: { reference: `Practitioner/${practitioner.id}` },
+      organization: { reference: `Organization/${organizationId}` },
+      roles: selectedRoles
+    };
+
+    const updateRoleResponse = await fetch(`${base}/api/role/patchRoles`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...updatedPractitionerRoleData,
+        id: practitionerRoleId // Include the PractitionerRole ID for updating
+      })
+    });
+
+    if (!updateRoleResponse.ok) {
+      const result = await updateRoleResponse.json();
+      throw new Error(`Failed to update practitioner roles: ${result.error || 'Unknown error'}`);
+    }
+
+    successMessage = 'Practitioner and roles updated successfully.';
+    dispatch('close');
+  } catch (error) {
+    console.error('Error updating practitioner:', error);
+    errorMessage = error.message || 'An error occurred. Please try again.';
+  } finally {
+    loading = false;
+  }
+}
+
     function handleClose() {
       dispatch('close');
     }

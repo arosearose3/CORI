@@ -37,21 +37,21 @@
   const practitionerId = $user?.practitioner?.Pid;
 
   const timeOptions = [
-  { value: '07:00', label: '7 am' },
-  { value: '08:00', label: '8 am' },
-  { value: '09:00', label: '9 am' },
-  { value: '10:00', label: '10 am' },
-  { value: '11:00', label: '11 am' },
-  { value: '12:00', label: '12 pm' },
-  { value: '13:00', label: '1 pm' },
-  { value: '14:00', label: '2 pm' },
-  { value: '15:00', label: '3 pm' },
-  { value: '16:00', label: '4 pm' },
-  { value: '17:00', label: '5 pm' },
-  { value: '18:00', label: '6 pm' },
-  { value: '19:00', label: '7 pm' },
-  { value: '20:00', label: '8 pm' },
-  { value: '21:00', label: '9 pm' }
+  { value: '07:00:00', label: '7 am' },
+  { value: '08:00:00', label: '8 am' },
+  { value: '09:00:00', label: '9 am' },
+  { value: '10:00:00', label: '10 am' },
+  { value: '11:00:00', label: '11 am' },
+  { value: '12:00:00', label: '12 pm' },
+  { value: '13:00:00', label: '1 pm' },
+  { value: '14:00:00', label: '2 pm' },
+  { value: '15:00:00', label: '3 pm' },
+  { value: '16:00:00', label: '4 pm' },
+  { value: '17:00:00', label: '5 pm' },
+  { value: '18:00:00', label: '6 pm' },
+  { value: '19:00:00', label: '7 pm' },
+  { value: '20:00:00', label: '8 pm' },
+  { value: '21:00:00', label: '9 pm' }
 ];
 
   function validateSmsNumber(number) {
@@ -107,8 +107,8 @@
         smsEnabled: data.telecom?.some(t => t.system === 'phone'),
         smsNumber: data.telecom?.find(t => t.system === 'phone')?.value || '',
         limitTexting: data.extension?.some(e => e.url === 'https://combinebh.org/cori-value-set-texting-limits'),
-        startTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-start')?.valueTime || '09:00',
-        endTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-end')?.valueTime || '17:00',
+        startTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-start')?.valueTime || '09:00:00',
+        endTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-end')?.valueTime || '17:00:00',
         dateOfBirth: data.birthDate || '',
         npi: data.identifier?.find(id => id.system === 'http://hl7.org/fhir/sid/us-npi')?.value || ''
       };
@@ -125,8 +125,19 @@
 
   // Add seconds to the time format if not already present
   function formatTime(time) {
-    return time.includes(':') ? `${time}:00` : time;
-  }
+      // Check if time is already in HH:MM:SS format
+      if (/^\d{2}:\d{2}:\d{2}$/.test(time)) {
+        return time;
+      }
+      
+      // If time is in HH:MM format, add ':00'
+      if (/^\d{2}:\d{2}$/.test(time)) {
+        return `${time}:00`;
+      }
+
+      // Return the time unchanged if it's in a different format
+      return time;
+    }
 
   async function handleSave() {
     try {
@@ -147,13 +158,17 @@
             value: formData.npi
           }
         ] : existingPractitionerData.identifier || [],
-        telecom: formData.smsEnabled && formData.smsNumber ? [
-          {
+
+        // Preserve existing telecom entries that are not 'phone' and merge the new phone data
+        telecom: [
+          ...existingPractitionerData.telecom?.filter(t => t.system !== 'phone') || [], // Keep other telecom entries (e.g., email)
+          ...(formData.smsEnabled && formData.smsNumber ? [{
             system: 'phone',
             value: formData.smsNumber,
             use: 'mobile'
-          }
-        ] : existingPractitionerData.telecom || [],
+          }] : [])
+        ],
+
         birthDate: formData.dateOfBirth || existingPractitionerData.birthDate,
         extension: [
           {
@@ -168,14 +183,16 @@
             url: 'https://combinebh.org/cori-value-set-texting-end',
             valueTime: formatTime(formData.endTime)
           },
-          ...existingPractitionerData.extension.filter(
-            ext => ![
-              'https://combinebh.org/cori-value-set-texting-limits',
-              'https://combinebh.org/cori-value-set-texting-start',
-              'https://combinebh.org/cori-value-set-texting-end'
-            ].includes(ext.url)
-          )
-        ]
+          ...((existingPractitionerData.extension && Array.isArray(existingPractitionerData.extension)) 
+              ? existingPractitionerData.extension.filter(
+                  ext => ![
+                    'https://combinebh.org/cori-value-set-texting-limits',
+                    'https://combinebh.org/cori-value-set-texting-start',
+                    'https://combinebh.org/cori-value-set-texting-end'
+                  ].includes(ext.url)
+                )
+              : [])
+          ]
       };
 
       await axios.put(`${BASE_URL}/update/${practitionerId}`, updatedPractitionerResource);
