@@ -10,6 +10,8 @@ import { service_getAllPractitionerIds } from './practitionerService.js';
 import { service_getAllPractitionerNamesAndIds } from './practitionerService.js';  
 import { service_findPractitionerByEmail} from './practitionerService.js'; 
 import { service_addPractitioner} from './practitionerService.js'; 
+import { service_deletePractitionerAndRoles} from './practitionerService.js';
+import { service_deletePractitioner} from './practitionerService.js';
 
 import { UserCodes } from './userCodes.js'; //all the invite codes for Oct 2024 users
 import { UserAdminCodes } from './userAdminCodes.js'; //all the invite codes for Oct 2024 users
@@ -21,6 +23,49 @@ import { BASE_PATH } from '../serverutils.js'; // Adjust the path as necessary
 const router = express.Router();
 const FHIR_BASE_URL = `https://healthcare.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}/fhir`;
 
+
+router.delete('/deletePractitionerAndPractitionerRoles/:id', async (req, res) => {
+  console.log("Starting deletion process for practitioner:", req.params.id);
+  
+  if (!auth) {
+      return res.status(400).json({ 
+          error: 'Not connected to Google Cloud. Call /connect first.' 
+      });
+  }
+  
+  try {
+      const result = await service_deletePractitionerAndRoles(req.params.id);
+      
+      // Map service status to HTTP status code
+      switch (result.status) {
+          case 'SUCCESS':
+              res.status(200).json({
+                  message: `Practitioner with ID ${req.params.id} and associated roles successfully deleted`,
+                  ...result
+              });
+              break;
+              
+          case 'PARTIAL_SUCCESS':
+              res.status(207).json({
+                  message: `Practitioner with ID ${req.params.id} deleted with some role deletions failed`,
+                  ...result
+              });
+              break;
+              
+          default:
+              res.status(500).json({
+                  message: `Failed to delete practitioner with ID ${req.params.id}`,
+                  ...result
+              });
+      }
+  } catch (error) {
+      res.status(500).json({
+          message: `Error processing deletion request for practitioner ${req.params.id}`,
+          error: error.message,
+          details: error
+      });
+  }
+});
 
 router.get('/getCodeByPractitionerId', (req, res) => {
   const { practitionerId } = req.query;
@@ -249,40 +294,35 @@ router.get('/all', async (req, res) => {
 });
 
 
-// Delete a Practitioner by ID
 router.delete('/delete/:id', async (req, res) => {
-  console.log ("in delete id",req.params.id);
-    if (!auth) {
-      return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
-    }
+  console.log("Route: Delete request for practitioner:", req.params.id);
   
-    const practitionerId = req.params.id;
-    console.log ("in delete pId:",practitionerId);
-    
-    try {
-      const accessToken = await getFhirAccessToken();
-      const searchUrl = `${FHIR_BASE_URL}/Practitioner/${practitionerId}`;
-      console.log ("in delete 4 accesstoken", accessToken);
-      
-      console.log(`Delete URL: ${searchUrl}`);
-
-      const response = await axios.delete(searchUrl, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`, // Use the getAccessToken function
-          Accept: 'application/fhir+json', // Ensure the request is FHIR-compliant
-        },
+  if (!auth) {
+      return res.status(400).json({ 
+          error: 'Not connected to Google Cloud. Call /connect first.' 
       });
-      console.log ("in delete 5");
-      // Check if the response was successful
-      console.log(`Delete response status: ${response.status}`);
-      res.status(200).json({ message: `Practitioner with ID ${practitionerId} deleted successfully` });
-    } catch (error) {
-      console.error('Error deleting practitioner:', error.response ? error.response.data : error.message);
-      res.status(500).json({ message: `Failed to delete practitioner with ID ${practitionerId}`, error: error.response ? error.response.data : error.message });
-    }
+  }
+  
+  const practitionerId = req.params.id;
+  
+  try {
+      const accessToken = await getFhirAccessToken();
+      
+      const result = await service_deletePractitioner(practitionerId, accessToken);
+      
+      res.status(200).json({ 
+          message: `Practitioner with ID ${practitionerId} deleted successfully` 
+      });
+  } catch (error) {
+      console.error('Route: Error handling delete request:', error);
+      
+      res.status(500).json({ 
+          message: `Failed to delete practitioner with ID ${practitionerId}`,
+          error: error.error || error.message
+      });
+  }
+});
 
-    
- });
 
 
   // Get all Practitioner Roles for a specific Practitioner ID

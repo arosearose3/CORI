@@ -91,37 +91,41 @@
   }
 
   async function loadPractitionerData() {
-    try {
-      state.isLoading = true;
-      state.error = null;
+  try {
+    state.isLoading = true;
+    state.error = null;
 
-      if (!practitionerId) {
-        throw new Error('No practitioner ID found');
-      }
-
-      const response = await axios.get(`${BASE_URL}/${practitionerId}`);
-      const data = response.data;
-      existingPractitionerData = data; // Save the full Practitioner resource
-
-      formData = {
-        smsEnabled: data.telecom?.some(t => t.system === 'phone'),
-        smsNumber: data.telecom?.find(t => t.system === 'phone')?.value || '',
-        limitTexting: data.extension?.some(e => e.url === 'https://combinebh.org/cori-value-set-texting-limits'),
-        startTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-start')?.valueTime || '09:00:00',
-        endTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-end')?.valueTime || '17:00:00',
-        dateOfBirth: data.birthDate || '',
-        npi: data.identifier?.find(id => id.system === 'http://hl7.org/fhir/sid/us-npi')?.value || ''
-      };
-
-      originalData = { ...formData };
-      
-    } catch (error) {
-      state.error = error.response?.data?.message || 'Failed to load practitioner data';
-      console.error('Load error:', error);
-    } finally {
-      state.isLoading = false;
+    if (!practitionerId) {
+      throw new Error('No practitioner ID found');
     }
+
+    const response = await axios.get(`${BASE_URL}/${practitionerId}`);
+    const data = response.data;
+    existingPractitionerData = data;
+
+    formData = {
+      smsEnabled: data.extension?.some(e => 
+        e.url === 'https://combinebh.org/cori-value-set-sms-enabled' && e.valueBoolean === true
+      ) || false,
+      smsNumber: data.telecom?.find(t => t.system === 'phone')?.value || '',
+      limitTexting: data.extension?.some(e => 
+        e.url === 'https://combinebh.org/cori-value-set-texting-limits' && e.valueBoolean === true
+      ) || false,
+      startTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-start')?.valueTime || '09:00:00',
+      endTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-end')?.valueTime || '17:00:00',
+      dateOfBirth: data.birthDate || '',
+      npi: data.identifier?.find(id => id.system === 'http://hl7.org/fhir/sid/us-npi')?.value || ''
+    };
+
+    originalData = { ...formData };
+    
+  } catch (error) {
+    state.error = error.response?.data?.message || 'Failed to load practitioner data';
+    console.error('Load error:', error);
+  } finally {
+    state.isLoading = false;
   }
+}
 
   // Add seconds to the time format if not already present
   function formatTime(time) {
@@ -139,89 +143,92 @@
       return time;
     }
 
-  async function handleSave() {
-    try {
-      state.isSaving = true;
-      state.error = null;
+    async function handleSave() {
+  try {
+    state.isSaving = true;
+    state.error = null;
 
-      // Fetch the current practitioner data before update to avoid clobbering other fields
-      if (!existingPractitionerData) {
-        throw new Error('No existing practitioner data found');
-      }
-
-      // Merge form data into the full practitioner resource
-      const updatedPractitionerResource = {
-        ...existingPractitionerData, // Include all original practitioner fields
-        identifier: formData.npi ? [
-          {
-            system: 'http://hl7.org/fhir/sid/us-npi',
-            value: formData.npi
-          }
-        ] : existingPractitionerData.identifier || [],
-
-        // Preserve existing telecom entries that are not 'phone' and merge the new phone data
-        telecom: [
-          ...existingPractitionerData.telecom?.filter(t => t.system !== 'phone') || [], // Keep other telecom entries (e.g., email)
-          ...(formData.smsEnabled && formData.smsNumber ? [{
-            system: 'phone',
-            value: formData.smsNumber,
-            use: 'mobile'
-          }] : [])
-        ],
-
-        birthDate: formData.dateOfBirth || existingPractitionerData.birthDate,
-        extension: [
-          {
-            url: 'https://combinebh.org/cori-value-set-texting-limits',
-            valueBoolean: formData.limitTexting
-          },
-          {
-            url: 'https://combinebh.org/cori-value-set-texting-start',
-            valueTime: formatTime(formData.startTime)
-          },
-          {
-            url: 'https://combinebh.org/cori-value-set-texting-end',
-            valueTime: formatTime(formData.endTime)
-          },
-          ...((existingPractitionerData.extension && Array.isArray(existingPractitionerData.extension)) 
-              ? existingPractitionerData.extension.filter(
-                  ext => ![
-                    'https://combinebh.org/cori-value-set-texting-limits',
-                    'https://combinebh.org/cori-value-set-texting-start',
-                    'https://combinebh.org/cori-value-set-texting-end'
-                  ].includes(ext.url)
-                )
-              : [])
-          ]
-      };
-
-      await axios.put(`${BASE_URL}/update/${practitionerId}`, updatedPractitionerResource);
-
-      user.update(store => ({
-        ...store,
-        practitioner: {
-          ...store.practitioner,
-          smsNumber: formData.smsNumber,
-          dateOfBirth: formData.dateOfBirth,
-          npi: formData.npi
-        }
-      }));
-
-      state.message = 'Settings saved successfully';
-      originalData = { ...formData };
-      state.hasChanges = false;
-
-      setTimeout(() => {
-        state.message = null;
-      }, 3000);
-
-    } catch (error) {
-      state.error = error.response?.data?.message || 'Failed to save changes';
-      console.error('Save error:', error);
-    } finally {
-      state.isSaving = false;
+    if (!existingPractitionerData) {
+      throw new Error('No existing practitioner data found');
     }
+
+    const updatedPractitionerResource = {
+      ...existingPractitionerData,
+      identifier: formData.npi ? [
+        {
+          system: 'http://hl7.org/fhir/sid/us-npi',
+          value: formData.npi
+        }
+      ] : existingPractitionerData.identifier || [],
+
+      telecom: [
+        ...existingPractitionerData.telecom?.filter(t => t.system !== 'phone') || [],
+        ...(formData.smsEnabled && formData.smsNumber ? [{
+          system: 'phone',
+          value: formData.smsNumber,
+          use: 'mobile'
+        }] : [])
+      ],
+
+      birthDate: formData.dateOfBirth || existingPractitionerData.birthDate,
+      extension: [
+        {
+          url: 'https://combinebh.org/cori-value-set-sms-enabled',
+          valueBoolean: formData.smsEnabled
+        },
+        {
+          url: 'https://combinebh.org/cori-value-set-texting-limits',
+          valueBoolean: formData.limitTexting
+        },
+        {
+          url: 'https://combinebh.org/cori-value-set-texting-start',
+          valueTime: formatTime(formData.startTime)
+        },
+        {
+          url: 'https://combinebh.org/cori-value-set-texting-end',
+          valueTime: formatTime(formData.endTime)
+        },
+        ...((existingPractitionerData.extension && Array.isArray(existingPractitionerData.extension)) 
+            ? existingPractitionerData.extension.filter(
+                ext => ![
+                  'https://combinebh.org/cori-value-set-sms-enabled',
+                  'https://combinebh.org/cori-value-set-texting-limits',
+                  'https://combinebh.org/cori-value-set-texting-start',
+                  'https://combinebh.org/cori-value-set-texting-end'
+                ].includes(ext.url)
+              )
+            : [])
+      ]
+    };
+
+    await axios.put(`${BASE_URL}/update/${practitionerId}`, updatedPractitionerResource);
+
+    user.update(store => ({
+      ...store,
+      practitioner: {
+        ...store.practitioner,
+        smsEnabled: formData.smsEnabled,
+        smsNumber: formData.smsNumber,
+        dateOfBirth: formData.dateOfBirth,
+        npi: formData.npi
+      }
+    }));
+
+    state.message = 'Settings saved successfully';
+    originalData = { ...formData };
+    state.hasChanges = false;
+
+    setTimeout(() => {
+      state.message = null;
+    }, 3000);
+
+  } catch (error) {
+    state.error = error.response?.data?.message || 'Failed to save changes';
+    console.error('Save error:', error);
+  } finally {
+    state.isSaving = false;
   }
+}
 
   onMount(loadPractitionerData);
 </script>

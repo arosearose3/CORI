@@ -18,7 +18,8 @@ export const navItems = [
   {
     label: 'Cori Helpdesk',
     icon: '☎',
-    path: `https://corisystem.atlassian.net/servicedesk/customer/portal/1`,
+    // path: `https://corisystem.atlassian.net/servicedesk/customer/portal/1`,
+    path: `${base}/helpdesk`,
     subject: 'Helpdesk',
     roles: ['provider','client','referrer','orgadmin','admin'], // Accessible only by admin
   },
@@ -29,13 +30,13 @@ export const navItems = [
     subject: 'Cori Clients',
     roles: ['admin'], // Accessible only by admin
   },
-  {
+/*   {
     label: 'Clients',
     icon: '⚙️',
     path: `${base}/client`,
     subject: 'Organization Clients',
     roles: ['orgadmin'], 
-  },
+  }, */
   {
     label: 'Staff Availability',
     icon: '⚙️',
@@ -56,18 +57,18 @@ export const navItems = [
     icon: '⚙️',
     path: `${base}/staff/admin`,
     subject: 'Cori Staff',
-    roles: ['admin','provider'], // Accessible only by admin
+    roles: ['admin'], // Accessible only by admin
   },
   {
     label: 'All Cori Organizations',
     icon: '🛠️',
     path: `${base}/admin/organizations`,
     subject: 'Admin',
-    roles: ['admin','provider'], // Accessible only by admin
+    roles: ['admin'], // Accessible only by admin
 
   },
   {
-    label: 'Settings',
+    label: 'System Settings',
     icon: '⚙️',
     path: `${base}/settings/admin`,
     subject: 'Admin Settings',
@@ -91,7 +92,7 @@ export const navItems = [
 
   },
   {
-    label: 'Settings',
+    label: 'Client Settings',
     icon: '⚙️',
     path: `${base}/settings/client`,
     subject: 'Client Settings',
@@ -112,7 +113,7 @@ export const navItems = [
     icon: '🔍',
     path: `${base}/organizationsearch`,
     subject: 'Organization Search',
-    roles: ['provider', 'admin', 'orgadmin'],
+    roles: ['admin'],
   },
 /*   {
     label: 'Notifications',

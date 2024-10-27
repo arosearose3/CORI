@@ -16,7 +16,140 @@ import {service_createPractitionerRole} from './roleService.js';
 import {service_updatePractitionerRoles} from './roleService.js';
 import {service_patchPractitionerRole} from './roleService.js';
 import {service_findExistingPractitionerRole} from './roleService.js';
+import {service_deletePractitionerRole} from './roleService.js';
+import { merchantapi_products_v1beta } from 'googleapis';
  
+
+
+export async function service_deletePractitioner(practitionerId) {
+ 
+
+  try {
+      const accessToken = await getFhirAccessToken();
+      console.log("Service: Deleting practitioner:", practitionerId);
+      
+      const searchUrl = `${FHIR_BASE_URL}/Practitioner/${practitionerId}`;
+      console.log(`Service: Delete URL: ${searchUrl}`);
+
+      const response = await axios.delete(searchUrl, {
+          headers: {
+              Authorization: `Bearer ${accessToken}`,
+              Accept: 'application/fhir+json',
+          },
+      });
+
+      console.log(`Service: Delete response status: ${response.status}`);
+      
+      if (response.status === 200) {
+          return {
+              success: true,
+              status: response.status
+          };
+      } else {
+          throw new Error(`Unexpected response status: ${response.status}`);
+      }
+  } catch (error) {
+      console.error('Service: Error deleting practitioner:', 
+          error.response ? error.response.data : error.message
+      );
+      throw {
+          success: false,
+          error: error.response ? error.response.data : error.message
+      };
+  }
+}
+
+
+export async function service_deletePractitionerAndRoles(practitionerId) {
+  let deletedRoles = [];
+  let failedRoles = [];
+  let practitionerDeleted = false;
+  
+  try {
+      // 1. Get all PractitionerRoles for this Practitioner
+      console.log("Fetching PractitionerRoles for practitioner:", practitionerId);
+      const practitionerRoles = await service_getPractitionerRoles(practitionerId);
+      
+      // Handle case where practitionerRoles might be null or undefined
+      let roles = [];
+      if (practitionerRoles?.resourceType === 'Bundle' && Array.isArray(practitionerRoles.entry)) {
+          roles = practitionerRoles.entry;
+      } else if (Array.isArray(practitionerRoles)) {
+          roles = practitionerRoles;
+      }
+      console.log(`Found ${roles.length} PractitionerRoles to delete`);
+
+      // 2. Delete each PractitionerRole if any exist
+      if (roles.length > 0) {
+        for (const role of roles) {
+            try {
+                const roleId = role.resource?.id || role.id;
+                const deleteResult = await service_deletePractitionerRole(roleId);
+                deletedRoles.push(roleId);
+                console.log(`Successfully deleted PractitionerRole: ${roleId}`);
+            } catch (roleError) {
+                const roleId = role.resource?.id || role.id;
+                console.error(`Failed to delete PractitionerRole ${roleId}:`, roleError);
+                failedRoles.push({
+                    id: roleId,
+                    error: roleError.message
+                });
+            }
+        }
+      }
+      
+      // 3. Delete the Practitioner
+      console.log("Deleting Practitioner:", practitionerId);
+      try {
+          const deleteResult = await service_deletePractitioner(practitionerId);
+          practitionerDeleted = deleteResult.success;
+      } catch (practitionerError) {
+          console.error("Error deleting practitioner:", practitionerError);
+          practitionerDeleted = false;
+          throw practitionerError;
+      }
+      
+      // 4. Prepare result object
+      const result = {
+          success: practitionerDeleted,
+          practitionerDeleted,
+          deletedRoles,
+          failedRoles,
+          summary: {
+              totalRoles: roles.length,
+              successfulRoleDeletions: deletedRoles.length,
+              failedRoleDeletions: failedRoles.length
+          }
+      };
+      
+      // Determine status based on results
+      // Modified logic to handle no roles case
+      if (roles.length === 0 && practitionerDeleted) {
+          result.status = 'SUCCESS';
+      } else if (failedRoles.length > 0 && practitionerDeleted) {
+          result.status = 'PARTIAL_SUCCESS';
+      } else if (practitionerDeleted) {
+          result.status = 'SUCCESS';
+      } else {
+          result.status = 'FAILURE';
+          throw new Error('Failed to delete practitioner');
+      }
+      
+      return result;
+      
+  } catch (error) {
+      console.error('Error in deletion process:', error.response ? error.response.data : error.message);
+      
+      throw {
+          message: `Failed to complete deletion process for practitioner ${practitionerId}`,
+          error: error.response ? error.response.data : error.message,
+          deletedRoles,
+          failedRoles,
+          practitionerDeleteAttempted: true,
+          practitionerDeleteSuccess: practitionerDeleted
+      };
+  }
+}
 
 export async function service_findPractitionerByEmail(email) {
   if (!email) {
@@ -271,27 +404,27 @@ export async function service_updatePractitionerEmailFromCode(code, email, names
   if (!accessToken) {
     throw new Error('Unable to retrieve access token');
   }
-  try {
+  
     console.log ("service_updateEmail from Code 14");
     let userContext = {email:email, name: namestring};
-    const practitionerResource =  service_createPractitionerResource(userContext);
+    const practitionerResource =  util_createPractitionerResource(userContext);
     console.log ("service_updateEmail from Code 15");
+
     console.log('Creating practitioner resource:', JSON.stringify(practitionerResource, null, 2));
-
-    const url = `${FHIR_BASE_URL}/Practitioner`;
-    const response = await axios.post(url, practitionerResource, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/fhir+json',
-        'Content-Type': 'application/fhir+json'
+    try {
+      console.log("About to call service_addPractitioner");
+      const r = await service_addPractitioner(practitionerResource);
+      console.log("Immediately after await, got response:", JSON.stringify(r, null, 2));
+      
+      if (!r || !r.id) {
+          throw new Error('Invalid response from service_addPractitioner: ' + JSON.stringify(r));
       }
-    });
-    console.log ("service_updateEmail from Code 16");
-    pId = response.data.id;
-
+      
+      pId = r.id;
+      console.log("Successfully set pId to:", pId);
   } catch (error) {
-    console.error(`Error in addPractitioner (requested by ${userContext?.email}):`, error);
-    throw error;
+      console.error("Error in service_addPractitioner flow:", error);
+      throw error;
   }
 
 
@@ -308,14 +441,15 @@ export async function service_updatePractitionerEmailFromCode(code, email, names
     console.log ("service_updateEmail from Code 17");
 
     if (!practRole) {//make a practitionerRole with pId and orgId 
-      console.log ("service_updateEmail from Code 18");
+      console.log ("service_updateEmail from Code 18 pid:", pId, " orgId:", orgId);
       practRole = await service_createPractitionerRole(pId, orgId);
+      console.log ("response from create:", practRole, JSON.stringify(practRole));
       // set roles to provider, referrer, orgadmin
-      let r = await service_patchPractitionerRole(practRole, ['provider','referrer','orgadmin']);
+      let r = await service_patchPractitionerRole(practRole.id, ['provider','orgadmin']);
       console.log ("service_updateEmail from Code 19");
       return { message: 'Practitioner, Admin, Roles, and Email updated successfully.' };
     } else {
-      let r2 = await  service_patchPractitionerRole(practRole, ['provider','referrer','orgadmin'])
+      let r2 = await  service_patchPractitionerRole(practRole.id, ['provider','orgadmin'])
       console.log ("service_updateEmail from Code 20");
       return { message: 'Practitioner, Admin, Roles, and Email updated successfully.' };
     }
@@ -335,38 +469,52 @@ function findAdminCodeEntry(code) {
 
 
 
-// practitionerController.js
 export async function service_addPractitioner(practitionerData) {
+  console.log('Starting service_addPractitioner');
+  
   if (!auth) {
-    throw new Error('Not connected to Google Cloud');
+      throw new Error('Not connected to Google Cloud');
   }
 
   // Ensure proper FHIR resource type
   practitionerData.resourceType = 'Practitioner';
+  console.log('Prepared practitioner data:', JSON.stringify(practitionerData, null, 2));
 
   // Get access token
+  console.log('Getting access token...');
   const accessToken = await getFhirAccessToken();
   if (!accessToken) {
-    throw new Error('Unable to retrieve access token');
+      throw new Error('Unable to retrieve access token');
   }
+  console.log('Got access token');
 
   try {
-    const url = `${FHIR_BASE_URL}/Practitioner`;
-    const response = await axios.post(url, practitionerData, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/fhir+json',
-        'Content-Type': 'application/fhir+json'
-      }
-    });
+      const url = `${FHIR_BASE_URL}/Practitioner`;
+      console.log('Making POST request to:', url);
+      
+      const response = await axios.post(url, practitionerData, {
+          headers: {
+              Authorization: `Bearer ${accessToken}`,
+              Accept: 'application/fhir+json',
+              'Content-Type': 'application/fhir+json'
+          }
+      });
+      
+      console.log('Received response:', JSON.stringify(response.data, null, 2));
+      console.log('Practitioner ID from response:', response.data.id);
 
-    return {
-      id: response.data.id,
-      data: response.data
-    };
+      const result = {
+          id: response.data.id,
+          data: response.data
+      };
+      
+      console.log('Returning result from service_addPractitioner:', JSON.stringify(result, null, 2));
+      return result;
+      
   } catch (error) {
-    console.error('Error in addPractitioner:', error);
-    throw error;
+      console.error('Error in addPractitioner:', error);
+      console.error('Error response data:', error.response?.data);
+      throw error;
   }
 }
 
@@ -438,7 +586,7 @@ export async function service_getPractitionerById(practitionerId) {
  * @param {Object} userContext - Contains user's name and email
  * @returns {Object} FHIR Practitioner resource
  */
-function service_createPractitionerResource(userContext) {
+function util_createPractitionerResource(userContext) {
   if (!userContext?.name || !userContext?.email) {
     throw new Error('User name and email are required');
   }

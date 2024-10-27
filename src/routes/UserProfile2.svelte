@@ -13,6 +13,7 @@
     justify-content: space-between;
     align-items: flex-start;
     margin-top: 1px;
+    padding: 20px;
   }
 
   .user-info {

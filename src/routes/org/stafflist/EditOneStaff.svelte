@@ -22,17 +22,35 @@
       { code: 'referrer', label: 'Referrer', description: 'Individuals or organizations that initiate a referral.', selected: false },
       { code: 'coordinator', label: 'Coordinator', description: 'Intermediaries that receive referrals and make referrals.', selected: false },
       { code: 'provider', label: 'Provider', description: 'A health-related provider.', selected: false },
-      { code: 'orgadmin', label: 'Org Admin', description: 'An organizational administrator.', selected: false }
+      { code: 'orgadmin', label: 'Org Admin', description: 'An organizational administrator.', selected: false },
+      { code: 'admin', label: 'Sysadmin', description: 'A Cori administrator.', selected: false }
     ];
+
+    let currentRoleCodes = (practitioner.roles || '')
+                          .split(', ')
+                          .map(role => role.toLowerCase())
+                          .map(role => {
+                            // Map the role labels to their corresponding codes
+                            switch(role) {
+                              case 'referrer': return 'referrer';
+                              case 'coordinator': return 'coordinator';
+                              case 'provider': return 'provider';
+                              case 'org admin': return 'orgadmin';
+                              case 'sysadmin': return 'admin';
+                              default: return role;
+                            }
+                          });
+
   
     // Set selected roles based on practitioner's current roles
     let currentRoles = practitioner.roles.split(', ');
+
     roles = roles.map(role => ({
       ...role,
-      selected: currentRoles.includes(role.label)
+      selected: currentRoleCodes.includes(role.code)
     }));
   
-    async function handleSubmit() {
+  async function handleSubmit() {
   loading = true;
   errorMessage = '';
   successMessage = '';
@@ -114,7 +132,7 @@
     }
 
     successMessage = 'Practitioner and roles updated successfully.';
-    dispatch('close');
+    dispatch('close', { success: true }); // Add success flag
   } catch (error) {
     console.error('Error updating practitioner:', error);
     errorMessage = error.message || 'An error occurred. Please try again.';
@@ -124,7 +142,7 @@
 }
 
     function handleClose() {
-      dispatch('close');
+      dispatch('close', { success: false }); 
     }
   </script>
   
@@ -167,7 +185,7 @@
   
       <div class="form-group">
         <label for="email">Email:</label>
-        <input id="email" type="email" bind:value={email}>
+        <input id="email" type="email" bind:value={email} readonly class="readonly-field">
       </div>
   
       <!-- Role Selection -->
@@ -200,6 +218,12 @@
   </div>
 
   <style>
+      .readonly-field {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+  
     .edit-staff-container {
       max-width: 600px;
       margin: 0 auto;

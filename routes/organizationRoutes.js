@@ -166,7 +166,7 @@ router.get('/getOrgEmail', async (req, res) => {
     console.log("org getEmail org:", JSON.stringify(organization));
     let orgEmail = null;
     
-    // Check if the 'contact' array exists and contains telecom data
+/*     // Check if the 'contact' array exists and contains telecom data
     if (organization.contact && Array.isArray(organization.contact)) {
       // Loop through each contact to find the email
       for (const contact of organization.contact) {
@@ -178,7 +178,17 @@ router.get('/getOrgEmail', async (req, res) => {
           }
         }
       }
-    }
+    } */
+
+    // Check if the top-level 'telecom' array exists
+      if (organization.telecom && Array.isArray(organization.telecom)) {
+        // Find the first email entry in the telecom array
+        const emailEntry = organization.telecom.find(t => t.system === 'email');
+        if (emailEntry) {
+          orgEmail = emailEntry.value;
+        }
+      }
+
     
     if (!orgEmail) {
       console.log("No email found for organization");

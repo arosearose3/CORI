@@ -116,7 +116,7 @@
 
   async function deletePractitioner(id) {
   try {
-    const response = await fetch(`${base}/api/practitioner/${id}`, {
+    const response = await fetch(`${base}/api/practitioner/deletePractitionerAndPractitionerRoles/${id}`, {
       method: 'DELETE'
     });
     

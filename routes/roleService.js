@@ -7,6 +7,53 @@ const FHIR_BASE_URL = `https://healthcare.googleapis.com/v1/projects/${PROJECT_I
 
 import { auth, healthcare, PROJECT_ID, LOCATION, DATASET_ID, FHIR_STORE_ID, handleBlobResponse } from '../serverutils.js';
 
+/** 
+* Service function to delete a PractitionerRole
+* @param {string} practitionerRoleId - The ID of the PractitionerRole to delete
+* @returns {Promise<Object>} Result of the deletion operation
+* @throws {Error} If deletion fails
+*/
+export async function service_deletePractitionerRole(practitionerRoleId) {
+   if (!practitionerRoleId) {
+       throw new Error('PractitionerRole ID is required');
+   }
+
+   try {
+       console.log('Service: Deleting PractitionerRole with ID:', practitionerRoleId);
+       
+       const accessToken = await getFhirAccessToken();
+       const deleteUrl = `${FHIR_BASE_URL}/PractitionerRole/${practitionerRoleId}`;
+       
+       const deleteResponse = await axios.delete(deleteUrl, {
+           headers: {
+               Authorization: `Bearer ${accessToken}`,
+               Accept: 'application/fhir+json',
+           },
+       });
+
+       // Check response status
+       if (deleteResponse.status === 200 || deleteResponse.status === 204) {
+        return {
+          success: true,
+          message: 'PractitionerRole deleted successfully',
+          status: deleteResponse.status
+      };
+       } else {
+           throw new Error(`Unexpected response status: ${deleteResponse.status}`);
+       }
+   } catch (error) {
+       console.error('Service: Error deleting PractitionerRole:', error);
+       
+       // Format error response
+       throw {
+           success: false,
+           error: error.message,
+           details: error.response?.data || error.message,
+           status: error.response?.status || 500
+       };
+   }
+}
+
 
 /**
  * Creates a new PractitionerRole linking a Practitioner to an Organization
@@ -68,18 +115,15 @@ export async function service_getPractitionerRoles(practitionerId) {
   if (!practitionerId) {
     throw new Error('Practitioner reference is required.');
   }
-
   try {
     const searchUrl = `${FHIR_BASE_URL}/PractitionerRole?practitioner=${practitionerId}`;
     const accessToken = await getFhirAccessToken();
-
     const response = await axios.get(searchUrl, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: 'application/fhir+json',
       },
     });
-
     const practitionerRoles = await handleBlobResponse(response.data);
     return practitionerRoles;
   } catch (error) {
@@ -180,7 +224,7 @@ export async function service_patchPractitionerRole(roleId, roles) {
     console.log("Successfully fetched access token.");
 
     // Step 2: Fetch the current PractitionerRole resource
-    const existingRoleUrl = `${FHIR_BASE_URL}/PractitionerRole/${roleId.id}`;
+    const existingRoleUrl = `${FHIR_BASE_URL}/PractitionerRole/${roleId}`;
     console.log("Fetching PractitionerRole from URL:", existingRoleUrl);
     
     existingRoleResponse = await axios.get(existingRoleUrl, {
@@ -220,7 +264,7 @@ export async function service_patchPractitionerRole(roleId, roles) {
 
   try {
     // Step 4: Patch the PractitionerRole resource with the new roles
-    patchUrl = `${FHIR_BASE_URL}/PractitionerRole/${roleId.id}`;
+    patchUrl = `${FHIR_BASE_URL}/PractitionerRole/${roleId}`;
     console.log("Patching PractitionerRole at URL:", patchUrl);
 
     patchResponse = await axios.patch(patchUrl, patchResource, {

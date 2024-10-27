@@ -26,9 +26,12 @@
  let maxWidth = 500; // Maximum sidebar width
 
  function startDragging(e) {
-   isDragging = true;
-   window.addEventListener('mousemove', handleDragging);
-   window.addEventListener('mouseup', stopDragging);
+  isDragging = true;
+    // Add user-select: none to both sidebar and main content
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ew-resize';
+    window.addEventListener('mousemove', handleDragging);
+    window.addEventListener('mouseup', stopDragging);
  }
 
  function handleDragging(e) {
@@ -37,9 +40,12 @@
  }
 
  function stopDragging() {
-   isDragging = false;
-   window.removeEventListener('mousemove', handleDragging);
-   window.removeEventListener('mouseup', stopDragging);
+  isDragging = false;
+    // Remove user-select: none when dragging stops
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+    window.removeEventListener('mousemove', handleDragging);
+    window.removeEventListener('mouseup', stopDragging);
  }
 
 
@@ -350,7 +356,11 @@ function selectPractitionerRole(selectedRole, orgName) {
 
 
   onDestroy(() => {
-    if (browser) {
+    if (browser) {     
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      window.removeEventListener('mousemove', handleDragging);
+      window.removeEventListener('mouseup', stopDragging);
       if (unsubscribeUser) unsubscribeUser();
       if (unsubscribeAbilities) unsubscribeAbilities();
     }
@@ -358,12 +368,20 @@ function selectPractitionerRole(selectedRole, orgName) {
 
 
 
-// Handle the organization selection event from the LoginChooseOrg component
-    function handleOrgSelected(event) {
-    const { practitionerRoleId, orgId } = event.detail;
-    console.log(`Organization selected: Role ID: ${practitionerRoleId}, Org ID: ${orgId}`);
-    // Implement further logic such as storing the selected practitioner role in the user store or fetching more data
-    selectedPractitionerRole = practitionerRoleId; // For now, just set the practitioner role
+  // Updated handleOrgSelected function
+  async function handleOrgSelected(event) {
+    const { practitionerRoleId, orgId, orgName } = event.detail;
+    console.log(`Organization selected: Role ID: ${practitionerRoleId}, Org ID: ${orgId}, Org Name: ${orgName}`);
+    
+    // Find the matching PractitionerRole from the existing roles
+    const selectedRole = $user.practitioner.practitionerRoles.find(role => role.id === practitionerRoleId);
+    
+    if (selectedRole) {
+      // Call selectPractitionerRole with the found role and organization name
+      selectPractitionerRole(selectedRole, orgName);
+    } else {
+      console.error('Could not find matching PractitionerRole');
+    }
   }
 
 
@@ -539,22 +557,22 @@ async function handleInviteCode(event) {
 .navigation-container {
   flex: 1; /* Allow it to grow and fill available space */
   overflow-y: auto; /* Enable scrolling if content overflows */
-  padding: 10px 20px; /* Add some padding */
-  background-color: #ffffff; /* Background color for contrast */
-  border-top: 1px solid #e0e0e0; /* Optional separator from header */
-  border-bottom: 1px solid #e0e0e0; /* Optional separator from footer */
+  padding: 0 20px 20px 20px; /* Add some padding */
+
 }
 
   .app-container {
     display: flex;
     height: 100vh;
     position: relative;
+    user-select: none;
   }
 
   .main-content {
    flex: 1;
    overflow-y: auto;
    padding: 20px;
+   user-select: text;
  }
 
 
@@ -568,13 +586,25 @@ async function handleInviteCode(event) {
   background: #ddd;  /* Light gray visible line */
   cursor: ew-resize;
   z-index: 10;
+  user-select: none;
+    /* Center the visible part */
+  display: flex;
+  justify-content: center;
 }
 
 
-.drag-handle:hover,
-.drag-handle.dragging {
-  background: #999;  /* Darker on hover */
-}
+.drag-handle:hover::after, .drag-handle.dragging::after {
+    background: #666;
+  }
+
+.drag-handle::after {
+    content: '';
+    width: 2px;
+    height: 100%;
+    background: #999;
+    /* Only show the center 2px for visual appeal */
+  }
+
 
   .sidebar {
    flex: none;  /* Changed from fixed width */
@@ -582,12 +612,13 @@ async function handleInviteCode(event) {
    flex-direction: column;
    background-color: #f8f9fa;
    height: 100vh;
-   overflow-y: auto;
+   overflow-y: hidden;
    transition: width 0.1s ease;
+   user-select: text;
  }
 
   .sidebar-content {
-    flex: 1;
+    flex: none;
     padding: 20px;
   }
 

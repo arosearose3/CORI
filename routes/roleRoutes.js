@@ -7,6 +7,8 @@ import {service_getPractitionerRolesByOrganization} from './roleService.js';
 import {service_getPractitionerRoles} from './roleService.js';
 import {service_createPractitionerRole} from './roleService.js';
 import {service_updatePractitionerRoles} from './roleService.js';
+import {service_deletePractitionerRole} from './roleService.js';
+
 
 import { BASE_PATH } from '../serverutils.js'; // Adjust the path as necessary
 
@@ -404,43 +406,33 @@ router.post('/create', async (req, res) => {
 
 // Delete a PractitionerRole by its ID
 router.delete('/delete', async (req, res) => {
-  try {
-    const { practitionerRoleId } = req.query; // Extract the PractitionerRole ID from the query parameters
+  const { practitionerRoleId } = req.query;
 
-    // Validate that the PractitionerRole ID is provided
-    if (!practitionerRoleId) {
-      return res.status(400).json({ error: 'PractitionerRole ID is required.' });
-    }
-
-    // Construct the FHIR API URL using the provided PractitionerRole ID
-    const deleteUrl = `${FHIR_BASE_URL}/PractitionerRole/${practitionerRoleId}`;
-    const accessToken = await getFhirAccessToken();
-
-    // Log the delete request details for debugging
-    console.log('Deleting PractitionerRole with ID:', practitionerRoleId);
-
-    // Make a DELETE request to remove the PractitionerRole from the FHIR server
-    const deleteResponse = await axios.delete(deleteUrl, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`, // Pass the access token in the request headers
-        Accept: 'application/fhir+json', // Set the appropriate headers to receive a FHIR-compliant JSON response
-      },
-    });
-
-    // Check the response status to confirm the deletion
-    if (deleteResponse.status === 204) {
-      // 204 No Content indicates successful deletion
-      res.status(200).json({ message: 'PractitionerRole deleted successfully' });
-    } else {
-      // Handle unexpected response status codes
-      res.status(deleteResponse.status).json({
-        error: 'Unexpected response from FHIR server during deletion',
-        details: deleteResponse.statusText,
+  // Validate required parameter
+  if (!practitionerRoleId) {
+      return res.status(400).json({ 
+          error: 'PractitionerRole ID is required.' 
       });
-    }
+  }
+
+  try {
+      console.log('Route: Processing delete request for PractitionerRole:', practitionerRoleId);
+      
+      const result = await service_deletePractitionerRole(practitionerRoleId);
+      
+      res.status(200).json({
+          message: result.message
+      });
   } catch (error) {
-    console.error('Error deleting PractitionerRole:', error.message);
-    res.status(500).json({ error: 'Failed to delete PractitionerRole', details: error.message });
+      console.error('Route: Error handling delete request:', error);
+      
+      // Determine appropriate status code
+      const statusCode = error.status || 500;
+      
+      res.status(statusCode).json({
+          error: 'Failed to delete PractitionerRole',
+          details: error.details || error.message
+      });
   }
 });
 

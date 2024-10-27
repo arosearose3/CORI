@@ -202,6 +202,7 @@
             
             // Optionally, you can refresh the list of practitioners after deletion
             await loadPractitioners(); // Reload the practitioners list
+            practitioners = [...practitioners];
             } else {
             // Handle non-OK responses (e.g., 400, 500)
             const errorData = await response.json();
@@ -219,39 +220,48 @@
      * Sorts the practitioners array based on the specified column.
      * @param {string} column - The column to sort by.
      */
-    function sortTable(column) {
-      if (sortColumn === column) {
-        // Toggle sort direction if the same column is clicked
-        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-      } else {
-        sortColumn = column;
-        sortDirection = 'asc'; // Reset to ascending order on new column
-      }
-  
-      practitioners = practitioners.sort((a, b) => {
-        let aValue = a[column];
-        let bValue = b[column];
-  
-        if (column === 'name' || column === 'roles') {
-        // Sort string columns alphabetically
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      } else if (column === 'birthDate') {
-        // Sort dates
-        aValue = new Date(aValue);
-        bValue = new Date(bValue);
-      } else {
-        // Sort other columns numerically if possible
-        aValue = isNaN(aValue) ? aValue : Number(aValue);
-        bValue = isNaN(bValue) ? bValue : Number(bValue);
-      }
-
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
+     function sortTable(column) {
+  if (sortColumn === column) {
+    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn = column;
+    sortDirection = 'asc';
   }
 
+  practitioners = practitioners.sort((a, b) => {
+    // Handle null/undefined values
+    let aValue = a[column] ?? '';
+    let bValue = b[column] ?? '';
+
+    // Special handling for specific columns
+    if (column === 'name' || column === 'roles' || column === 'email' || column === 'sms' || column === 'npi') {
+      // Convert to lowercase strings and handle 'Unknown'
+      aValue = String(aValue).toLowerCase();
+      bValue = String(bValue).toLowerCase();
+      
+      // Put 'unknown' values at the end
+      if (aValue === 'unknown' && bValue !== 'unknown') return 1;
+      if (bValue === 'unknown' && aValue !== 'unknown') return -1;
+    } else if (column === 'birthDate') {
+      // Convert to dates, handle invalid dates
+      aValue = aValue ? new Date(aValue) : new Date(0);
+      bValue = bValue ? new Date(bValue) : new Date(0);
+      
+      // Handle invalid dates
+      if (isNaN(aValue)) aValue = new Date(0);
+      if (isNaN(bValue)) bValue = new Date(0);
+    } else {
+      // For any other columns, try numeric conversion
+      aValue = !isNaN(aValue) ? Number(aValue) : aValue;
+      bValue = !isNaN(bValue) ? Number(bValue) : bValue;
+    }
+
+    // Perform the comparison
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+}
     function showEdit(practitioner) {
         selectedPractitioner = practitioner;
     }
@@ -260,9 +270,12 @@
     selectedPractitioner = practitioner;
   }
 
-    function handleCloseEdit() {
+  function handleEditComplete(event) {
+        // Only reload practitioners if the edit was successful
+        if (event.detail?.success) {
+            loadPractitioners();
+        }
         selectedPractitioner = null;
-        loadPractitioners(); // Reload the practitioners list after editing
     }
 
     function formatLastUpdate(timestamp) {
@@ -339,7 +352,7 @@
   <EditOneStaff 
     practitioner={selectedPractitioner}
     practitionerRoleId={selectedPractitioner.roleId}
-    on:close={handleCloseEdit}
+    on:close={handleEditComplete}
   />
 {:else}
   <span>
@@ -386,8 +399,8 @@
                 {#if sortColumn === 'roles'}
                   <span class="sort-indicator" class:desc={sortDirection === 'desc'}></span>
                 {/if}
-              </th>
-              <th> Invite Code</th>
+          <!--     </th>
+              <th> Invite Code</th> -->
               <th>Remove</th>
             </tr>
           </thead>
@@ -408,7 +421,7 @@
             <td>{practitioner.sms}</td>
             <td>{practitioner.email}</td>
             <td>{practitioner.roles}</td>
-            <td>{practitioner.inviteCode}</td>
+  <!--           <td>{practitioner.inviteCode}</td> -->
             <td>
               <span class="delete-icon" on:click={() => handleDelete(practitioner.id, practitioner.roleId)}>
                 🗑️
