@@ -1,6 +1,10 @@
 <script>
   import { onMount } from 'svelte';
   import { base } from '$app/paths'; // Import base path
+  import EditPractitioner from './EditPractitioner.svelte';
+
+  let showEditForm = false;
+  let selectedPractitionerId = null;
 
   let practitioners = [];
   let isLoading = true;
@@ -8,7 +12,15 @@
   let sortColumn = 'name';
   let sortAscending = true;
 
-  onMount(fetchPractitioners);
+
+  onMount(async() => {
+    await fetchPractitioners();  // Direct call
+    window.addEventListener('edit-practitioner', handleEditPractitioner);
+    return () => {
+      window.removeEventListener('edit-practitioner', handleEditPractitioner);
+    };
+  });
+ 
 
   async function fetchPractitioners() {
     try {
@@ -27,28 +39,31 @@
     }
   }
 
-  function processPractitionerBundle(bundle) {
-    if (!bundle || !bundle.entry || !Array.isArray(bundle.entry)) {
-      return [];
-    }
-    
-    const practitioners = bundle.entry.map((entry) => {
-      const resource = entry.resource;
-      
-      if (resource && resource.resourceType === 'Practitioner') {
-        return {
-          id: resource.id || '',
-          name: resource.name || [],
-          telecom: resource.telecom || [],
-          gender: resource.gender || 'unknown',
-          birthDate: resource.birthDate || 'N/A',
-        };
-      }
-      return null;
-    }).filter(practitioner => practitioner !== null);
-
-    return practitioners;
+  function processPractitionerBundle(PArray) {
+  // Ensure PArray is an array
+  if (!Array.isArray(PArray)) {
+    return [];
   }
+
+  // Process the entries in the array
+  const practitioners = PArray.map((entry) => {
+    const resource = entry.resource;
+
+    // Check if the resource is a Practitioner and extract the necessary data
+    if (resource && resource.resourceType === 'Practitioner') {
+      return {
+        id: resource.id || '',
+        name: resource.name || [],
+        telecom: resource.telecom || [],
+        gender: resource.gender || 'unknown',
+        birthDate: resource.birthDate || 'N/A',
+      };
+    }
+    return null;
+  }).filter(practitioner => practitioner !== null); // Filter out null values
+
+  return practitioners;
+}
 
   function formatName(name) {
     if (!name || !name.length) return 'N/A';
@@ -98,10 +113,48 @@
     }
     sortPractitioners();
   }
+
+  async function deletePractitioner(id) {
+  try {
+    const response = await fetch(`${base}/api/practitioner/deletePractitionerAndPractitionerRoles/${id}`, {
+      method: 'DELETE'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to delete practitioner with ID ${id}`);
+    }
+    
+    // Remove the practitioner from the array after successful deletion
+    practitioners = practitioners.filter(practitioner => practitioner.id !== id);
+  } catch (error) {
+    console.error('Error deleting practitioner:', error.message);
+  }
+}
+
+function openEditForm(practitionerId) {
+    // Create a custom event to open the modal
+    const event = new CustomEvent('edit-practitioner', {
+      detail: { practitionerId }
+    });
+    window.dispatchEvent(event);
+  }
+  function handleEditPractitioner(event) {
+    selectedPractitionerId = event.detail.practitionerId;
+    showEditForm = true;
+  }
+
+
 </script>
 
 
 <div class="all-practitioners">
+
+    {#if showEditForm}
+    <EditPractitioner 
+      practitionerId={selectedPractitionerId} 
+      onClose={() => showEditForm = false}
+    />
+    {/if}
   <h2>All Practitioners</h2>
 
   {#if isLoading}
@@ -142,7 +195,9 @@
                 </svg>
               </button>
             </td>
-            <td>{formatName(practitioner.name)}</td>
+            <td on:click={() => openEditForm(practitioner.id)} class="name-cell">
+              {formatName(practitioner.name)}
+            </td>
             <td>
               {#if formatTelecom(practitioner.telecom) !== 'N/A'}
                 <a href="https://elig.pro/avail/update-schedule?id={practitioner.id}" class="email-link">
@@ -162,6 +217,17 @@
 </div>
 
 <style>
+
+.name-cell {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  
+  .name-cell:hover {
+    transform: scale(1.05);
+    background-color: #f0f0f0;
+  }
+
   .all-practitioners {
     max-width: 800px;
     margin: 0 auto;

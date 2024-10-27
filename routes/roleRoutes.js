@@ -4,6 +4,11 @@ import axios from 'axios';
 import { google } from 'googleapis';  // Assuming you use Google API for authentication
 import { getFhirAccessToken } from '../src/lib/auth/auth.js'; // Adjust the path as needed
 import {service_getPractitionerRolesByOrganization} from './roleService.js';
+import {service_getPractitionerRoles} from './roleService.js';
+import {service_createPractitionerRole} from './roleService.js';
+import {service_updatePractitionerRoles} from './roleService.js';
+import {service_deletePractitionerRole} from './roleService.js';
+
 
 import { BASE_PATH } from '../serverutils.js'; // Adjust the path as necessary
 
@@ -206,108 +211,38 @@ router.patch('/patchCapacity', async (req, res) => {
 
 // pathRoles expects a Practitioner and Organization, and will create a new PractitionerRole if there isn't one, with roles.
 // if there is one, it will add or replace roles. 
-
+// routes/practitionerRoutes.js
 router.patch('/patchRoles', async (req, res) => {
   try {
     const { organization, practitioner, roles } = req.body;
-    const practitionerId = practitioner.reference.replace('Practitioner/', '');
-    const organizationId = organization.reference.replace('Organization/', '');
 
-    if (!practitionerId || !organizationId || !Array.isArray(roles)) {
-      return res.status(400).json({ error: 'Practitioner ID, Organization ID, and roles are required.' });
-    }
-
-    // Get the OAuth2 access token
-    const accessToken = await getFhirAccessToken();
-
-    // Find the existing PractitionerRole
-    let practitionerRoleId;
-    try {
-      const findResponse = await axios.get(`${FHIR_BASE_URL}/PractitionerRole`, {
-        params: { 
-          practitioner: `Practitioner/${practitionerId}`,
-          organization: `Organization/${organizationId}`
-        },
-        headers: { 
-          Authorization: `Bearer ${accessToken}`,
-          Accept: 'application/fhir+json'
-        },
+    if (!practitioner?.reference || !organization?.reference || !Array.isArray(roles)) {
+      return res.status(400).json({ 
+        error: 'Practitioner reference, Organization reference, and roles array are required.' 
       });
-
-      const bundle = await handleBlobResponse(findResponse.data);
-      const matchingRole = bundle.entry?.find(entry => 
-        entry.resource.practitioner?.reference === `Practitioner/${practitionerId}` &&
-        entry.resource.organization?.reference === `Organization/${organizationId}`
-      );
-
-      practitionerRoleId = matchingRole?.resource.id;
-    } catch (findError) {
-      console.error('Error finding PractitionerRole:', findError.message);
-      if (!findError.response || findError.response.status !== 404) {
-        return res.status(500).json({ error: 'Failed to find PractitionerRole', details: findError.message });
-      }
     }
 
-    // If the PractitionerRole exists, attempt to patch it
-    if (practitionerRoleId) {
-      try {
-        const patchResource = [
-          {
-            op: 'replace',
-            path: '/code',
-            value: roles.map(role => ({
-              coding: [{ system: 'https://combinebh.org/cori-value-set/', code: role }],
-            })),
-          },
-        ];
+    const result = await service_updatePractitionerRoles(practitioner, organization, roles);
+    
+    const statusCode = result.action === 'created' ? 201 : 200;
+    const message = `PractitionerRole ${result.action} successfully`;
+    
+    res.status(statusCode).json({ 
+      message, 
+      data: result.data 
+    });
 
-        const patchUrl = `${FHIR_BASE_URL}/PractitionerRole/${practitionerRoleId}`;
-
-        const patchResponse = await axios.patch(patchUrl, patchResource, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json-patch+json',
-            Accept: 'application/fhir+json',
-          },
-        });
-
-        return res.status(200).json({ message: 'PractitionerRole patched successfully', data: patchResponse.data });
-      } catch (patchError) {
-        console.error('Error patching PractitionerRole:', patchError.message);
-        return res.status(500).json({ error: 'Failed to patch PractitionerRole', details: patchError.message });
-      }
-    }
-
-    // If no existing PractitionerRole is found, create a new one
-    const createRoleResource = {
-      resourceType: 'PractitionerRole',
-      practitioner: { reference: `Practitioner/${practitionerId}` },
-      organization: { reference: `Organization/${organizationId}` },
-      code: roles.map(role => ({
-        coding: [{ system: 'https://combinebh.org/cori-value-set/', code: role }],
-      })),
-      active: true,
-    };
-
-    try {
-      const createUrl = `${FHIR_BASE_URL}/PractitionerRole`;
-
-      const createResponse = await axios.post(createUrl, createRoleResource, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/fhir+json',
-          Accept: 'application/fhir+json',
-        },
-      });
-
-      return res.status(201).json({ message: 'PractitionerRole created successfully', data: createResponse.data });
-    } catch (createError) {
-      console.error('Error creating PractitionerRole:', createError.message);
-      return res.status(500).json({ error: 'Failed to create PractitionerRole', details: createError.message });
-    }
   } catch (error) {
-    console.error('Error processing request:', error.message);
-    res.status(500).json({ error: 'An error occurred while processing the request', details: error.message });
+    console.error('Error in patchRoles route:', error);
+
+    if (error.message.includes('reference') || error.message.includes('required')) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(500).json({ 
+      error: 'Failed to update PractitionerRole', 
+      details: error.message 
+    });
   }
 });
 
@@ -341,25 +276,27 @@ router.get('/all', async (req, res) => {
 router.get('/PractitionerRole', async (req, res) => {
   try {
     const { practitioner } = req.query;
+    
     if (!practitioner) {
-      return res.status(400).json({ error: 'Practitioner reference is required.' });
+      return res.status(400).json({ 
+        error: 'Practitioner reference is required.' 
+      });
     }
 
-     const searchUrl = `${FHIR_BASE_URL}/PractitionerRole?practitioner=${practitioner}`;
-    const accessToken = await getFhirAccessToken();
-
-    const response = await axios.get(searchUrl, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/fhir+json',
-      },
-    });
-
-    const practitionerRoles = await handleBlobResponse(response.data);
+    const practitionerRoles = await service_getPractitionerRoles(practitioner);
     res.json(practitionerRoles);
   } catch (error) {
-    console.error('Error fetching PractitionerRoles:', error.message);
-    res.status(500).json({ error: 'Failed to fetch PractitionerRoles', details: error.message });
+    console.error('Error in PractitionerRole route:', error);
+    
+    // Handle specific error cases
+    if (error.message.includes('Practitioner reference is required')) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(500).json({ 
+      error: 'Failed to fetch PractitionerRoles', 
+      details: error.message 
+    });
   }
 });
 
@@ -427,89 +364,75 @@ router.get('/getOne', async (req, res) => {
   }
 });
 
-// Create a new PractitionerRole with a PractitionerId and an OrganizationId
+// routes/practitionerRoutes.js
 router.post('/create', async (req, res) => {
   try {
-    const { practitionerId, organizationId } = req.body; // Extract the practitioner and organization IDs from the request body
+    const { practitionerId, organizationId } = req.body;
 
-    // Validate that the required IDs are provided
+    // Validate request parameters
     if (!practitionerId || !organizationId) {
-      return res.status(400).json({ error: 'Practitioner ID and Organization ID are required.' });
+      return res.status(400).json({ 
+        error: 'Practitioner ID and Organization ID are required.' 
+      });
     }
 
-    // Construct the PractitionerRole resource
-    const practitionerRoleResource = {
-      resourceType: 'PractitionerRole',
-      practitioner: { reference: `Practitioner/${practitionerId}` },
-      organization: { reference: `Organization/${organizationId}` },
-      active: true,
-    };
+    const createdRole = await service_createPractitionerRole(
+      practitionerId, 
+      organizationId
+    );
 
-    // Get the OAuth2 access token
-    const accessToken = await getFhirAccessToken();
-
-    // Define the FHIR API URL for creating the PractitionerRole
-    const createUrl = `${FHIR_BASE_URL}/PractitionerRole`;
-
-    // Log the creation request details for debugging
-    console.log('Creating PractitionerRole:', JSON.stringify(practitionerRoleResource));
-    
-    // Send a POST request to create the PractitionerRole resource on the FHIR server
-    const createResponse = await axios.post(createUrl, practitionerRoleResource, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`, // Include the access token in the request headers
-        'Content-Type': 'application/fhir+json', // Specify that the request body is FHIR-compliant JSON
-        Accept: 'application/fhir+json', // Expect a FHIR-compliant JSON response
-      },
+    res.status(201).json({ 
+      message: 'PractitionerRole created successfully', 
+      data: createdRole 
     });
-
-    // Handle the response and send back the created PractitionerRole resource
-    res.status(201).json({ message: 'PractitionerRole created successfully', data: createResponse.data });
   } catch (error) {
-    console.error('Error creating PractitionerRole:', error.message);
-    res.status(500).json({ error: 'Failed to create PractitionerRole', details: error.message });
+    console.error('Error in create PractitionerRole route:', error);
+
+    // Handle specific error cases
+    if (error.message.includes('ID is required')) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    if (error.message.includes('Failed to obtain access token')) {
+      return res.status(401).json({ error: error.message });
+    }
+
+    res.status(500).json({ 
+      error: 'Failed to create PractitionerRole', 
+      details: error.message 
+    });
   }
 });
 
 // Delete a PractitionerRole by its ID
 router.delete('/delete', async (req, res) => {
-  try {
-    const { practitionerRoleId } = req.query; // Extract the PractitionerRole ID from the query parameters
+  const { practitionerRoleId } = req.query;
 
-    // Validate that the PractitionerRole ID is provided
-    if (!practitionerRoleId) {
-      return res.status(400).json({ error: 'PractitionerRole ID is required.' });
-    }
-
-    // Construct the FHIR API URL using the provided PractitionerRole ID
-    const deleteUrl = `${FHIR_BASE_URL}/PractitionerRole/${practitionerRoleId}`;
-    const accessToken = await getFhirAccessToken();
-
-    // Log the delete request details for debugging
-    console.log('Deleting PractitionerRole with ID:', practitionerRoleId);
-
-    // Make a DELETE request to remove the PractitionerRole from the FHIR server
-    const deleteResponse = await axios.delete(deleteUrl, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`, // Pass the access token in the request headers
-        Accept: 'application/fhir+json', // Set the appropriate headers to receive a FHIR-compliant JSON response
-      },
-    });
-
-    // Check the response status to confirm the deletion
-    if (deleteResponse.status === 204) {
-      // 204 No Content indicates successful deletion
-      res.status(200).json({ message: 'PractitionerRole deleted successfully' });
-    } else {
-      // Handle unexpected response status codes
-      res.status(deleteResponse.status).json({
-        error: 'Unexpected response from FHIR server during deletion',
-        details: deleteResponse.statusText,
+  // Validate required parameter
+  if (!practitionerRoleId) {
+      return res.status(400).json({ 
+          error: 'PractitionerRole ID is required.' 
       });
-    }
+  }
+
+  try {
+      console.log('Route: Processing delete request for PractitionerRole:', practitionerRoleId);
+      
+      const result = await service_deletePractitionerRole(practitionerRoleId);
+      
+      res.status(200).json({
+          message: result.message
+      });
   } catch (error) {
-    console.error('Error deleting PractitionerRole:', error.message);
-    res.status(500).json({ error: 'Failed to delete PractitionerRole', details: error.message });
+      console.error('Route: Error handling delete request:', error);
+      
+      // Determine appropriate status code
+      const statusCode = error.status || 500;
+      
+      res.status(statusCode).json({
+          error: 'Failed to delete PractitionerRole',
+          details: error.details || error.message
+      });
   }
 });
 

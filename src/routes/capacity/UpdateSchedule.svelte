@@ -235,9 +235,11 @@ function handleAvailabilityProcessed(event) {
 
   {#if isDataReady}
     <Pick4 on:capacitychange={handleCapacityChange} capacity={capacityData} />
-    <br><hr />
-    <RecordButton on:availabilityProcessed={handleAvailabilityProcessed} />
     <br>
+<!--     
+    <hr />
+    <RecordButton on:availabilityProcessed={handleAvailabilityProcessed} />
+    <br> -->
     {#key availabilityComponent.key}
     <Availability 
       initialAvailability={availabilityComponent.data} 

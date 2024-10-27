@@ -1,5 +1,5 @@
 <script>
-    import TaskAnimateProvenance from '../refer/TaskAnimateProvenance.svelte'
+    import TaskAnimateProvenance from './TaskAnimateProvenance.svelte'
 </script>
 
 <h3>Component Demos</h3>

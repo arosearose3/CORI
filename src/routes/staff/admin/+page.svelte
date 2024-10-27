@@ -7,8 +7,6 @@
   //  import UploadCombine from "./UploadCombine.svelte";
 
 </script>
-
-<h4>All Practitioners, although no paging.</h4>
 <div class="practitioner-container">
 
   <AllPractitionersBig />

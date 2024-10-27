@@ -573,7 +573,8 @@ function sortPractitionersByScore() {
 
 <!--Audio Processing UI-->
 
-<RecordButton on:availabilityProcessed={handleAvailabilityProcessed} />
+<!-- <RecordButton on:availabilityProcessed={handleAvailabilityProcessed} /> -->
+ <br>
 
   <!-- Display scored availability result -->
   {#if scoredAvailability}

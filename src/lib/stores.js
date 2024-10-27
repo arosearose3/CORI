@@ -1,12 +1,12 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { AbilityBuilder, PureAbility } from '@casl/ability';
 import { navItems } from '$lib/navConfig.js';
+import { browser } from '$app/environment';
 
 // Initialize PureAbility with an empty rule set
 const initialAbilities = new PureAbility([]);
 
-export const exc_uploadStatus = writable(''); //used in ExclusionCheck
-export const exc_checkResults = writable([]);
+
 
 // Initial state for user and practitioner
 const initialUserState = {
@@ -32,6 +32,44 @@ const initialUserState = {
     localOrgArray: [],
   },
 };
+
+// Utility function to create a dummy writable store when not in the browser
+function createDummyWritable(initialValue) {
+  const { subscribe } = writable(initialValue);
+  return {
+    subscribe,
+    set: () => {},  // no-op for set
+    update: () => {}  // no-op for update
+  };
+}
+
+function createSafeStore(initialValue) {
+  if (!browser) {
+    // During SSR, return a minimal store implementation
+    return {
+      subscribe: () => () => {},
+      set: () => {},
+      update: () => {}
+    };
+  }
+
+  // In browser, return full writable store
+  const store = writable(initialValue);
+  return {
+    subscribe: store.subscribe,
+    set: (value) => {
+      console.log('Setting store value:', value);
+      store.set(value);
+    },
+    update: (updater) => {
+      store.update((currentValue) => {
+        const newValue = updater(currentValue);
+        console.log('Updating store value:', newValue);
+        return newValue;
+      });
+    }
+  };
+}
 
 // Function to create a writable store with persistent storage
 const createPersistentStore = (key, startValue) => {
@@ -59,11 +97,17 @@ const createPersistentStore = (key, startValue) => {
   };
 };
 
-// Main store combining user data and practitioner data
-export const user = createPersistentStore('userStore', initialUserState);
 
-// Writable store to manage CASL abilities
-export const abilities = writable(new PureAbility([]));
+export const user = createSafeStore(initialUserState);
+export const abilities = createSafeStore(new PureAbility([]));
+export const exc_uploadStatus = createSafeStore('');
+export const exc_checkResults = createSafeStore([]);
+
+export const isUserAuthenticated = createSafeStore(false);
+
+
+console.log('Exporting user store:', user);
+console.log('Exporting abilities store:', abilities);
 
 export function updateAbilities(userRoles) {
   if (!userRoles || !Array.isArray(userRoles) || userRoles.length === 0) {
@@ -100,22 +144,25 @@ export function updateAbilities(userRoles) {
 }
 
 export function setUser(userData) {
+  console.log('stores.js setUser called with:', userData);
   if (!userData || typeof userData !== 'object') {
     console.error('Invalid user data:', userData);
     return;
   }
 
-  user.update(store => ({
-    ...store,
-    user: {
-      id: userData.id || null,
-      email: userData.email || null,
-      name: userData.name || null,
-      picture: userData.picture || null,
-    },
-  }));
+  //console.log ("stores.js user.update userData",JSON.stringify(userData));
 
-  updateAbilities(userData.roles || []);
+  user.update(store => {
+    const updatedStore = {
+      ...store,
+      user: userData.user  // Store the entire user object as it comes from the server
+    };
+    console.log('Updated user store:', updatedStore);
+    return updatedStore;
+  });
+
+
+  updateAbilities(userData.user?.roles || []);
 }
 
 export function setPractitioner(practitionerData) {
@@ -137,7 +184,10 @@ export function setPractitioner(practitionerData) {
 }
 
 export function clearUserStore() {
-  user.reset();
+  // Reset the user to the initial state (e.g., null)
+  user.set(null); 
+  
+  // Reset abilities
   abilities.set(new PureAbility([]));
 }
 
@@ -156,11 +206,14 @@ export const actions = {
   updateAbilities,
 };
 
-// Helper function to check if practitioner data has been fetched
 export function hasFetchedPractitionerData() {
-  let fetchedData = false;
-  user.subscribe(store => {
-    fetchedData = store.practitioner.Pid !== null;
-  })();
-  return fetchedData;
+  if (!browser) return false;
+  let result = false;
+  try {
+    const store = get(user);
+    result = store?.practitioner?.Pid !== null;
+  } catch (error) {
+    console.error('Error checking practitioner data:', error);
+  }
+  return result;
 }

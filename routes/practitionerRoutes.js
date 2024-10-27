@@ -8,8 +8,13 @@ import { service_getPractitionerRolesByOrganization} from './roleService.js';
 import { service_updatePractitionerEmailFromCode } from './practitionerService.js';
 import { service_getAllPractitionerIds } from './practitionerService.js'; 
 import { service_getAllPractitionerNamesAndIds } from './practitionerService.js';  
+import { service_findPractitionerByEmail} from './practitionerService.js'; 
+import { service_addPractitioner} from './practitionerService.js'; 
+import { service_deletePractitionerAndRoles} from './practitionerService.js';
+import { service_deletePractitioner} from './practitionerService.js';
 
 import { UserCodes } from './userCodes.js'; //all the invite codes for Oct 2024 users
+import { UserAdminCodes } from './userAdminCodes.js'; //all the invite codes for Oct 2024 users
 
 
 import { BASE_PATH } from '../serverutils.js'; // Adjust the path as necessary
@@ -18,6 +23,49 @@ import { BASE_PATH } from '../serverutils.js'; // Adjust the path as necessary
 const router = express.Router();
 const FHIR_BASE_URL = `https://healthcare.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/datasets/${DATASET_ID}/fhirStores/${FHIR_STORE_ID}/fhir`;
 
+
+router.delete('/deletePractitionerAndPractitionerRoles/:id', async (req, res) => {
+  console.log("Starting deletion process for practitioner:", req.params.id);
+  
+  if (!auth) {
+      return res.status(400).json({ 
+          error: 'Not connected to Google Cloud. Call /connect first.' 
+      });
+  }
+  
+  try {
+      const result = await service_deletePractitionerAndRoles(req.params.id);
+      
+      // Map service status to HTTP status code
+      switch (result.status) {
+          case 'SUCCESS':
+              res.status(200).json({
+                  message: `Practitioner with ID ${req.params.id} and associated roles successfully deleted`,
+                  ...result
+              });
+              break;
+              
+          case 'PARTIAL_SUCCESS':
+              res.status(207).json({
+                  message: `Practitioner with ID ${req.params.id} deleted with some role deletions failed`,
+                  ...result
+              });
+              break;
+              
+          default:
+              res.status(500).json({
+                  message: `Failed to delete practitioner with ID ${req.params.id}`,
+                  ...result
+              });
+      }
+  } catch (error) {
+      res.status(500).json({
+          message: `Error processing deletion request for practitioner ${req.params.id}`,
+          error: error.message,
+          details: error
+      });
+  }
+});
 
 router.get('/getCodeByPractitionerId', (req, res) => {
   const { practitionerId } = req.query;
@@ -54,15 +102,23 @@ router.get('/getAllIds', async (req, res) => {
 // and matching their code to the provider Id, and then assigning the Provider Resource the email
 // then the system will recognize their email address when they log in. 
 
-router.post('/updateEmailFromCode', async (req, res) => {
-  const { code, email } = req.body;
+// this will work for Admins of Organizations 
+// there exist practitioner Resources without emails, but no PractitionerRole
+// the invite codes are linked to the PractitionerResource, so when the invite code is entered,
+// the Practitioner ID is known, and the email can be linked. and the PractRole can be created. 
+// then user has to log in again, and should see appropriate roles. 
 
+
+router.post('/updateEmailFromCode', async (req, res) => {
+  const { code, email, namestring } = req.body;
+
+  console.log ("/updateEmailFromCode endpoint namestring:", namestring);
   if (!code || !email) {
     return res.status(400).json({ error: 'Code and email are required.' });
   }
 
   try {
-    const result = await service_updatePractitionerEmailFromCode(code, email);
+    const result = await service_updatePractitionerEmailFromCode(code, email, namestring);
     return res.status(200).json(result);
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -115,70 +171,60 @@ router.put('/update/:practitionerId', async (req, res) => {
 
 router.get('/findWithEmail', async (req, res) => {
   const { email } = req.query;
-  if (!email) {
-    return res.status(400).json({ error: 'Email is required.' });
-  } 
+
   try {
-    // Construct the FHIR search URL with the correct telecom query parameter format
-    const accessToken = await getFhirAccessToken();
-    const searchUrl = `${FHIR_BASE_URL}/Practitioner?telecom=${email}`;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required.' });
+    }
 
-    // Make the request using axios
-    const response = await axios.get(searchUrl, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`, // Use the getAccessToken function
-        Accept: 'application/fhir+json', // Ensure the request is FHIR-compliant
-      },
-    });
-
-    const practitioners = await handleBlobResponse(response.data);
-    // Check if practitioners were found
-    if (practitioners.entry && practitioners.entry.length > 0) {
-      return res.json(practitioners.entry.map((practitioner) => practitioner.resource));
+    const practitioners = await service_findPractitionerByEmail(email);
+    
+    if (practitioners) {
+      return res.json(practitioners);
     } else {
-      return res.status(404).json({ message: 'No practitioner found with the provided email.' });
+      return res.status(404).json({ 
+        message: 'No practitioner found with the provided email.' 
+      });
     }
   } catch (error) {
-    console.error('Error fetching Practitioner by email:', error);
-    return res.status(500).json({ error: 'Failed to fetch Practitioner', details: error.message });
+    console.error('Error in findWithEmail route:', error);
+    return res.status(500).json({ 
+      error: 'Failed to fetch Practitioner', 
+      details: error.message 
+    });
   }
 });
 
 
 
 router.post('/add', async (req, res) => {
-  if (!auth) {
-    return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
-  }
-
   try {
-    const practitionerData = req.body;
-    practitionerData.resourceType = 'Practitioner'; // Ensure resourceType is set
-
-    // Get the access token for FHIR API
-    const accessToken = await getFhirAccessToken();
-    if (!accessToken) {
-      return res.status(401).json({ error: 'Unable to retrieve access token.' });
-    }
-
-    // Construct the FHIR URL
-    const url = `${FHIR_BASE_URL}/Practitioner`;
-
-    // Make the POST request using axios
-    const response = await axios.post(url, practitionerData, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/fhir+json',
-        'Content-Type': 'application/fhir+json'
-      }
+    const practitionerResult = await service_addPractitioner(req.body);
+    
+    res.status(201).json({ 
+      message: 'Practitioner added successfully', 
+      practitionerID: practitionerResult.id 
     });
-
-    // Return the new PractitionerID from the response
-    const practitionerID = response.data.id;
-    res.status(201).json({ message: 'Practitioner added successfully', practitionerID });
   } catch (error) {
-    console.error('Error adding practitioner:', error);
-    res.status(500).json({ message: 'Failed to add practitioner', error: error.message });
+    console.error('Error in add practitioner route:', error);
+    
+    if (error.message === 'Not connected to Google Cloud') {
+      return res.status(400).json({ 
+        error: 'Not connected to Google Cloud. Call /connect first.' 
+      });
+    }
+    
+    if (error.message === 'Unable to retrieve access token') {
+      return res.status(401).json({ 
+        error: 'Unable to retrieve access token.' 
+      });
+    }
+    
+    // Handle any other errors
+    res.status(500).json({ 
+      message: 'Failed to add practitioner', 
+      error: error.message 
+    });
   }
 });
 
@@ -214,55 +260,69 @@ router.get('/all', async (req, res) => {
   }
   try {
     const accessToken = await getFhirAccessToken();
-    const searchUrl = `${FHIR_BASE_URL}/Practitioner`;
-    const response = await axios.get(searchUrl, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`, // Use the getAccessToken function
-        Accept: 'application/fhir+json', // Ensure the request is FHIR-compliant
-      },
-    });
-    const practitioners = await handleBlobResponse(response.data);
-   // console.log('Fetched all practitioners:', JSON.stringify(practitioners));
-    res.json(practitioners);
+    let allPractitioners = [];
+    let nextUrl = `${FHIR_BASE_URL}/Practitioner`; // Initial search URL
+    let hasMorePages = true;
+
+    while (hasMorePages) {
+      const response = await axios.get(nextUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/fhir+json',
+        },
+      });
+
+      // Process the current page of practitioners
+      const currentPagePractitioners = await handleBlobResponse(response.data);
+      console.log ("Pract route currentPagePract:",JSON.stringify(currentPagePractitioners));
+
+      allPractitioners = [...allPractitioners, ...currentPagePractitioners.entry];
+
+      // Check if there's a next page
+      const nextLink = response.data?.link?.find(link => link.relation === 'next');
+      if (nextLink && nextLink.url) {
+        nextUrl = nextLink.url; // Move to the next page
+      } else {
+        hasMorePages = false; // No more pages
+      }
+    }
+
+    res.json(allPractitioners); // Return all practitioners
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch practitioners', details: error.message });
   }
 });
 
-// Delete a Practitioner by ID
+
 router.delete('/delete/:id', async (req, res) => {
-  console.log ("in delete id",req.params.id);
-    if (!auth) {
-      return res.status(400).json({ error: 'Not connected to Google Cloud. Call /connect first.' });
-    }
+  console.log("Route: Delete request for practitioner:", req.params.id);
   
-    const practitionerId = req.params.id;
-    console.log ("in delete pId:",practitionerId);
-    
-    try {
-      const accessToken = await getFhirAccessToken();
-      const searchUrl = `${FHIR_BASE_URL}/Practitioner/${practitionerId}`;
-      console.log ("in delete 4 accesstoken", accessToken);
-      
-      console.log(`Delete URL: ${searchUrl}`);
-
-      const response = await axios.delete(searchUrl, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`, // Use the getAccessToken function
-          Accept: 'application/fhir+json', // Ensure the request is FHIR-compliant
-        },
+  if (!auth) {
+      return res.status(400).json({ 
+          error: 'Not connected to Google Cloud. Call /connect first.' 
       });
-      console.log ("in delete 5");
-      // Check if the response was successful
-      console.log(`Delete response status: ${response.status}`);
-      res.status(200).json({ message: `Practitioner with ID ${practitionerId} deleted successfully` });
-    } catch (error) {
-      console.error('Error deleting practitioner:', error.response ? error.response.data : error.message);
-      res.status(500).json({ message: `Failed to delete practitioner with ID ${practitionerId}`, error: error.response ? error.response.data : error.message });
-    }
+  }
+  
+  const practitionerId = req.params.id;
+  
+  try {
+      const accessToken = await getFhirAccessToken();
+      
+      const result = await service_deletePractitioner(practitionerId, accessToken);
+      
+      res.status(200).json({ 
+          message: `Practitioner with ID ${practitionerId} deleted successfully` 
+      });
+  } catch (error) {
+      console.error('Route: Error handling delete request:', error);
+      
+      res.status(500).json({ 
+          message: `Failed to delete practitioner with ID ${practitionerId}`,
+          error: error.error || error.message
+      });
+  }
+});
 
-    
- });
 
 
   // Get all Practitioner Roles for a specific Practitioner ID
