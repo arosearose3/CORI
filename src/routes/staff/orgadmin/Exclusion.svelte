@@ -1,11 +1,13 @@
 <script>
   import { onMount } from 'svelte';
+  import { base } from '$app/paths';
+
   import FileUpload from './FileUpload.svelte';
   import ExclusionCheck from './ExclusionCheck.svelte';
   import ResultsTable from './ResultsTable.svelte';
   import EmailNotification from './EmailNotification.svelte';
   
-  const API_URL = 'https://elig.pro/avail/prod/api/exclusion/';
+  const API_URL = '${base}/api/exclusion/';
   
   onMount(() => {
     console.log('Main component mounted');

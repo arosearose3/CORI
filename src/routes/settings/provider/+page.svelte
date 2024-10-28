@@ -24,7 +24,7 @@
   };
 
   let originalData = { ...formData };
-  let existingPractitionerData = null; // Hold the full practitioner resource
+  let existingPractitionerData = null;
 
   let validation = {
     smsNumber: { isValid: true, message: '' },
@@ -37,22 +37,22 @@
   const practitionerId = $user?.practitioner?.Pid;
 
   const timeOptions = [
-  { value: '07:00:00', label: '7 am' },
-  { value: '08:00:00', label: '8 am' },
-  { value: '09:00:00', label: '9 am' },
-  { value: '10:00:00', label: '10 am' },
-  { value: '11:00:00', label: '11 am' },
-  { value: '12:00:00', label: '12 pm' },
-  { value: '13:00:00', label: '1 pm' },
-  { value: '14:00:00', label: '2 pm' },
-  { value: '15:00:00', label: '3 pm' },
-  { value: '16:00:00', label: '4 pm' },
-  { value: '17:00:00', label: '5 pm' },
-  { value: '18:00:00', label: '6 pm' },
-  { value: '19:00:00', label: '7 pm' },
-  { value: '20:00:00', label: '8 pm' },
-  { value: '21:00:00', label: '9 pm' }
-];
+    { value: '07:00:00', label: '7 am' },
+    { value: '08:00:00', label: '8 am' },
+    { value: '09:00:00', label: '9 am' },
+    { value: '10:00:00', label: '10 am' },
+    { value: '11:00:00', label: '11 am' },
+    { value: '12:00:00', label: '12 pm' },
+    { value: '13:00:00', label: '1 pm' },
+    { value: '14:00:00', label: '2 pm' },
+    { value: '15:00:00', label: '3 pm' },
+    { value: '16:00:00', label: '4 pm' },
+    { value: '17:00:00', label: '5 pm' },
+    { value: '18:00:00', label: '6 pm' },
+    { value: '19:00:00', label: '7 pm' },
+    { value: '20:00:00', label: '8 pm' },
+    { value: '21:00:00', label: '9 pm' }
+  ];
 
   function validateSmsNumber(number) {
     if (!number) return { isValid: true, message: '' };
@@ -72,7 +72,25 @@
     };
   }
 
+  // Add reactive statement to check form validity
+  $: {
+    validation.smsNumber = validateSmsNumber(formData.smsNumber);
+    validation.npi = validateNPI(formData.npi);
+  }
+
   $: isFormValid = validation.smsNumber.isValid && validation.npi.isValid;
+
+  // Add reactive statement to check for changes
+  $: {
+  state.hasChanges =
+    formData.smsEnabled !== originalData.smsEnabled ||
+    formData.smsNumber !== originalData.smsNumber ||
+    formData.limitTexting !== originalData.limitTexting ||
+    formData.startTime !== originalData.startTime ||
+    formData.endTime !== originalData.endTime ||
+    formData.dateOfBirth !== originalData.dateOfBirth ||
+    formData.npi !== originalData.npi;
+}
 
   function formatPhoneNumber(input) {
     const cleaned = input.replace(/\D/g, '');
@@ -83,156 +101,143 @@
     return input;
   }
 
-  function handleChange() {
-    state.hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
-
-    validation.smsNumber = validateSmsNumber(formData.smsNumber);
-    validation.npi = validateNPI(formData.npi);
-  }
-
   async function loadPractitionerData() {
-  try {
-    state.isLoading = true;
-    state.error = null;
+    try {
+      state.isLoading = true;
+      state.error = null;
 
-    if (!practitionerId) {
-      throw new Error('No practitioner ID found');
-    }
-
-    const response = await axios.get(`${BASE_URL}/${practitionerId}`);
-    const data = response.data;
-    existingPractitionerData = data;
-
-    formData = {
-      smsEnabled: data.extension?.some(e => 
-        e.url === 'https://combinebh.org/cori-value-set-sms-enabled' && e.valueBoolean === true
-      ) || false,
-      smsNumber: data.telecom?.find(t => t.system === 'phone')?.value || '',
-      limitTexting: data.extension?.some(e => 
-        e.url === 'https://combinebh.org/cori-value-set-texting-limits' && e.valueBoolean === true
-      ) || false,
-      startTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-start')?.valueTime || '09:00:00',
-      endTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-end')?.valueTime || '17:00:00',
-      dateOfBirth: data.birthDate || '',
-      npi: data.identifier?.find(id => id.system === 'http://hl7.org/fhir/sid/us-npi')?.value || ''
-    };
-
-    originalData = { ...formData };
-    
-  } catch (error) {
-    state.error = error.response?.data?.message || 'Failed to load practitioner data';
-    console.error('Load error:', error);
-  } finally {
-    state.isLoading = false;
-  }
-}
-
-  // Add seconds to the time format if not already present
-  function formatTime(time) {
-      // Check if time is already in HH:MM:SS format
-      if (/^\d{2}:\d{2}:\d{2}$/.test(time)) {
-        return time;
+      if (!practitionerId) {
+        throw new Error('No practitioner ID found');
       }
+
+      const response = await axios.get(`${BASE_URL}/${practitionerId}`);
+      const data = response.data;
+      existingPractitionerData = data;
+
+      formData = {
+        smsEnabled: data.extension?.some(e => 
+          e.url === 'https://combinebh.org/cori-value-set-sms-enabled' && e.valueBoolean === true
+        ) || false,
+        smsNumber: data.telecom?.find(t => t.system === 'phone')?.value || '',
+        limitTexting: data.extension?.some(e => 
+          e.url === 'https://combinebh.org/cori-value-set-texting-limits' && e.valueBoolean === true
+        ) || false,
+        startTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-start')?.valueTime || '09:00:00',
+        endTime: data.extension?.find(e => e.url === 'https://combinebh.org/cori-value-set-texting-end')?.valueTime || '17:00:00',
+        dateOfBirth: data.birthDate || '',
+        npi: data.identifier?.find(id => id.system === 'http://hl7.org/fhir/sid/us-npi')?.value || ''
+      };
+
+      // Create a deep copy for comparison
+      originalData = JSON.parse(JSON.stringify(formData));
       
-      // If time is in HH:MM format, add ':00'
-      if (/^\d{2}:\d{2}$/.test(time)) {
-        return `${time}:00`;
-      }
+    } catch (error) {
+      state.error = error.response?.data?.message || 'Failed to load practitioner data';
+      console.error('Load error:', error);
+    } finally {
+      state.isLoading = false;
+    }
+  }
 
-      // Return the time unchanged if it's in a different format
+  function formatTime(time) {
+    if (/^\d{2}:\d{2}:\d{2}$/.test(time)) {
       return time;
     }
-
-    async function handleSave() {
-  try {
-    state.isSaving = true;
-    state.error = null;
-
-    if (!existingPractitionerData) {
-      throw new Error('No existing practitioner data found');
+    if (/^\d{2}:\d{2}$/.test(time)) {
+      return `${time}:00`;
     }
-
-    const updatedPractitionerResource = {
-      ...existingPractitionerData,
-      identifier: formData.npi ? [
-        {
-          system: 'http://hl7.org/fhir/sid/us-npi',
-          value: formData.npi
-        }
-      ] : existingPractitionerData.identifier || [],
-
-      telecom: [
-        ...existingPractitionerData.telecom?.filter(t => t.system !== 'phone') || [],
-        ...(formData.smsEnabled && formData.smsNumber ? [{
-          system: 'phone',
-          value: formData.smsNumber,
-          use: 'mobile'
-        }] : [])
-      ],
-
-      birthDate: formData.dateOfBirth || existingPractitionerData.birthDate,
-      extension: [
-        {
-          url: 'https://combinebh.org/cori-value-set-sms-enabled',
-          valueBoolean: formData.smsEnabled
-        },
-        {
-          url: 'https://combinebh.org/cori-value-set-texting-limits',
-          valueBoolean: formData.limitTexting
-        },
-        {
-          url: 'https://combinebh.org/cori-value-set-texting-start',
-          valueTime: formatTime(formData.startTime)
-        },
-        {
-          url: 'https://combinebh.org/cori-value-set-texting-end',
-          valueTime: formatTime(formData.endTime)
-        },
-        ...((existingPractitionerData.extension && Array.isArray(existingPractitionerData.extension)) 
-            ? existingPractitionerData.extension.filter(
-                ext => ![
-                  'https://combinebh.org/cori-value-set-sms-enabled',
-                  'https://combinebh.org/cori-value-set-texting-limits',
-                  'https://combinebh.org/cori-value-set-texting-start',
-                  'https://combinebh.org/cori-value-set-texting-end'
-                ].includes(ext.url)
-              )
-            : [])
-      ]
-    };
-
-    await axios.put(`${BASE_URL}/update/${practitionerId}`, updatedPractitionerResource);
-
-    user.update(store => ({
-      ...store,
-      practitioner: {
-        ...store.practitioner,
-        smsEnabled: formData.smsEnabled,
-        smsNumber: formData.smsNumber,
-        dateOfBirth: formData.dateOfBirth,
-        npi: formData.npi
-      }
-    }));
-
-    state.message = 'Settings saved successfully';
-    originalData = { ...formData };
-    state.hasChanges = false;
-
-    setTimeout(() => {
-      state.message = null;
-    }, 3000);
-
-  } catch (error) {
-    state.error = error.response?.data?.message || 'Failed to save changes';
-    console.error('Save error:', error);
-  } finally {
-    state.isSaving = false;
+    return time;
   }
-}
+
+  async function handleSave() {
+    try {
+      state.isSaving = true;
+      state.error = null;
+
+      if (!existingPractitionerData) {
+        throw new Error('No existing practitioner data found');
+      }
+
+      const updatedPractitionerResource = {
+        ...existingPractitionerData,
+        identifier: formData.npi ? [
+          {
+            system: 'http://hl7.org/fhir/sid/us-npi',
+            value: formData.npi
+          }
+        ] : existingPractitionerData.identifier || [],
+
+        telecom: [
+          ...existingPractitionerData.telecom?.filter(t => t.system !== 'phone') || [],
+          ...(formData.smsEnabled && formData.smsNumber ? [{
+            system: 'phone',
+            value: formData.smsNumber,
+            use: 'mobile'
+          }] : [])
+        ],
+
+        birthDate: formData.dateOfBirth || existingPractitionerData.birthDate,
+        extension: [
+          {
+            url: 'https://combinebh.org/cori-value-set-sms-enabled',
+            valueBoolean: formData.smsEnabled
+          },
+          {
+            url: 'https://combinebh.org/cori-value-set-texting-limits',
+            valueBoolean: formData.limitTexting
+          },
+          {
+            url: 'https://combinebh.org/cori-value-set-texting-start',
+            valueTime: formatTime(formData.startTime)
+          },
+          {
+            url: 'https://combinebh.org/cori-value-set-texting-end',
+            valueTime: formatTime(formData.endTime)
+          },
+          ...((existingPractitionerData.extension && Array.isArray(existingPractitionerData.extension)) 
+              ? existingPractitionerData.extension.filter(
+                  ext => ![
+                    'https://combinebh.org/cori-value-set-sms-enabled',
+                    'https://combinebh.org/cori-value-set-texting-limits',
+                    'https://combinebh.org/cori-value-set-texting-start',
+                    'https://combinebh.org/cori-value-set-texting-end'
+                  ].includes(ext.url)
+                )
+              : [])
+        ]
+      };
+
+      await axios.put(`${BASE_URL}/update/${practitionerId}`, updatedPractitionerResource);
+
+      user.update(store => ({
+        ...store,
+        practitioner: {
+          ...store.practitioner,
+          smsEnabled: formData.smsEnabled,
+          smsNumber: formData.smsNumber,
+          dateOfBirth: formData.dateOfBirth,
+          npi: formData.npi
+        }
+      }));
+
+      state.message = 'Settings saved successfully';
+      originalData = JSON.parse(JSON.stringify(formData));
+      state.hasChanges = false;
+
+      setTimeout(() => {
+        state.message = null;
+      }, 3000);
+
+    } catch (error) {
+      state.error = error.response?.data?.message || 'Failed to save changes';
+      console.error('Save error:', error);
+    } finally {
+      state.isSaving = false;
+    }
+  }
 
   onMount(loadPractitionerData);
 </script>
-
 
 <div class="provider-settings">
   {#if state.isLoading}
@@ -254,7 +259,6 @@
             <input 
               type="checkbox" 
               bind:checked={formData.smsEnabled}
-              on:change={handleChange}
             >
             Enable Text Messages
           </label>
@@ -264,12 +268,8 @@
               <input
                 type="tel"
                 placeholder="(555) 555-5555"
-                value={formData.smsNumber}
+                bind:value={formData.smsNumber}
                 class:invalid={!validation.smsNumber.isValid}
-                on:input={e => {
-                  formData.smsNumber = formatPhoneNumber(e.target.value);
-                  handleChange();
-                }}
               />
               {#if !validation.smsNumber.isValid}
                 <span class="validation-message">{validation.smsNumber.message}</span>
@@ -280,7 +280,6 @@
                   <input 
                     type="checkbox" 
                     bind:checked={formData.limitTexting}
-                    on:change={handleChange}
                   >
                   Limit Texting Hours
                 </label>
@@ -289,7 +288,6 @@
                   <div class="time-selectors" transition:fade>
                     <select
                       bind:value={formData.startTime}
-                      on:change={handleChange}
                     >
                       {#each timeOptions as time}
                         <option value={time.value}>{time.label}</option>
@@ -298,7 +296,6 @@
                     <span>to</span>
                     <select
                       bind:value={formData.endTime}
-                      on:change={handleChange}
                     >
                       {#each timeOptions as time}
                         <option value={time.value}>{time.label}</option>
@@ -321,7 +318,6 @@
             type="date"
             id="dob"
             bind:value={formData.dateOfBirth}
-            on:change={handleChange}
           />
         </div>
 
@@ -332,7 +328,6 @@
             id="npi"
             bind:value={formData.npi}
             class:invalid={!validation.npi.isValid}
-            on:input={handleChange}
           />
           {#if !validation.npi.isValid}
             <span class="validation-message">{validation.npi.message}</span>
@@ -344,7 +339,7 @@
         <button
           type="submit"
           class="save-button"
-          disabled={!state.hasChanges || !isFormValid || state.isSaving}
+          disabled={!state.hasChanges }
         >
           {state.isSaving ? 'Saving...' : 'Save Changes'}
         </button>

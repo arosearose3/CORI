@@ -12,7 +12,7 @@ export const FHIR_STORE_ID = process.env.FHIR_STORE_ID;
 export const healthcare = google.healthcare('v1');
 
 // Base path based on environment
-export const BASE_PATH = process.env.RUNTIME_ENV === 'prod' ? '/avail/prod' : '/avail/dev';
+export const BASE_PATH = process.env.BASE_PATH;
 
 
 // Initialize GoogleAuth with correct scopes

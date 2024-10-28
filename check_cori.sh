@@ -22,23 +22,23 @@ log_message "Checking for $FRONTSERVER_KEYWORD process..."
 if ! ps aux | grep "$FRONTSERVER_KEYWORD" | grep -v "grep" | grep -v "$0" > /dev/null
 then
     log_message "$FRONTSERVER_KEYWORD is not running."
-    log_message "Starting $FRONTSERVER_KEYWORD with command: $FRONTSERVER_COMMAND"
-    $FRONTSERVER_COMMAND &
-    log_message "$FRONTSERVER_KEYWORD started."
+    log_message "Starting $FRONTSERVER_KEYWORD with nohup..."
+    nohup $FRONTSERVER_COMMAND > /dev/null 2>&1 &
+    log_message "$FRONTSERVER_KEYWORD started with nohup."
 else
     log_message "$FRONTSERVER_KEYWORD is already running."
 fi
 
-# Check and start the cori.js process if necessary
-log_message "Checking for $PROCESS_KEYWORD process..."
-if ! ps aux | grep "$PROCESS_KEYWORD" | grep -v "grep" | grep -v "$0" > /dev/null
+# Check if port 3000 is in use (which should be where cori.js listens)
+log_message "Checking if port 3000 is being used by $PROCESS_KEYWORD..."
+if ! lsof -i :3000 > /dev/null
 then
-    log_message "$PROCESS_KEYWORD is not running."
-    log_message "Starting $PROCESS_KEYWORD with command: $START_COMMAND"
-    $START_COMMAND &
-    log_message "$PROCESS_KEYWORD started."
+    log_message "Port 3000 is not in use. Starting $PROCESS_KEYWORD with nohup..."
+    nohup $START_COMMAND > /dev/null 2>&1 &
+    log_message "$PROCESS_KEYWORD started with nohup."
 else
-    log_message "$PROCESS_KEYWORD is already running."
+    log_message "Port 3000 is already in use. $PROCESS_KEYWORD is likely running."
 fi
 
 log_message "=== Script execution finished ==="
+

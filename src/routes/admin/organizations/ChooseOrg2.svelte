@@ -20,6 +20,21 @@
     dispatch('OrgChosen', selectedOrg);
   }
 
+    // Function to fetch invite code for each organization and attach it to the organization object
+
+  async function fetchInviteCodeForOrganization(org) {
+    try {
+      const response = await fetch(`${base}/api/organization/getCodeByOrganizationId?organizationId=${org.id}`);
+      const data = await response.json();
+      org.inviteCode = data.code || 'No code found';  // Attach the invite code to the org object
+    } catch (error) {
+      console.error('Error fetching invite code:', error);
+      org.inviteCode = 'No code found';
+    }
+  }
+
+
+
   async function handleSendInvite(email, inviteCode, orgName) {
     const subject = 'Your Cori Organization Administrator Invite Code';
     const htmlContent = `Your Cori Organization Administrator Invite Code is ${inviteCode}<br><br>Watch https://www.loom.com/share/c898dc8ffaa74d93be5a1d0f283daa75`;
@@ -42,6 +57,7 @@
       alert(`Failed to send invite email to ${orgName}`);
     }
   }
+
 
   async function handleDelete(organizationId) {
     const confirmDelete = confirm('Do you really want to delete this organization and all associated PractitionerRoles?');
@@ -90,7 +106,6 @@
     }
   }
 
-  // Function to fetch organizations from API
   async function fetchOrganizations() {
     if (retryCount >= maxRetries) return; // Stop fetching if max retries have been reached
 
@@ -108,6 +123,9 @@
         generalError = null;
         retryCount = 0; // Reset retry count on success
         fetchFailed = false; // Reset fetch failure flag
+
+        // Fetch invite codes for each organization after fetching organizations
+        await Promise.all(organizations.map(fetchInviteCodeForOrganization));
       } else {
         throw new Error('Failed to fetch organizations');
       }
@@ -163,23 +181,15 @@
   });
 </script>
 
+
+
 <!-- Render the table of organizations -->
 {#if organizations.length > 0}
   <table>
     <thead>
       <tr>
-        <th on:click={() => sortTable('name')}>
-          Name
-          {#if sortColumn === 'name'}
-            <span class="sort-indicator" class:desc={sortDirection === 'desc'}></span>
-          {/if}
-        </th>
-        <th on:click={() => sortTable('email')}>
-          Email
-          {#if sortColumn === 'email'}
-            <span class="sort-indicator" class:desc={sortDirection === 'desc'}></span>
-          {/if}
-        </th>
+        <th on:click={() => sortTable('name')}>Name</th>
+        <th on:click={() => sortTable('email')}>Email</th>
         <th>Invite Code</th>
         <th>Actions</th>
         <th>Delete</th>
@@ -188,9 +198,7 @@
     <tbody>
       {#each organizations as org}
         <tr>
-          <td>
-            <span class="org-name" on:click={() => handleOrgSelect(org.id)}>{org.name}</span>
-          </td>
+          <td>{org.name}</td>
           <td>
             {#if org.telecom && org.telecom.some(t => t.system === 'email')}
               {org.telecom.find(t => t.system === 'email').value}
@@ -199,25 +207,17 @@
             {/if}
           </td>
           <td>
-
-                  {#await findInviteCode(org.id) then inviteCode}
-                    {inviteCode}
-                  {/await}
-
-          </td>
+            {#if org.inviteCode}
+            {org.inviteCode}
+          {:else}
+            Loading...
+          {/if}
           <td>
-            {#await findInviteCode(org.id) then inviteCode}
-              {inviteCode}
-              {#if org.telecom && org.telecom.some(t => t.system === 'email')}
-                <button on:click={() => handleSendInvite(
-                  org.telecom.find(t => t.system === 'email').value, 
-                  inviteCode,
-                  org.name
-                )}>
-                  Send Invite
-                </button>
-              {/if}
-            {/await}
+            {#if org.telecom && org.telecom.some(t => t.system === 'email')}
+              <button on:click={() => handleSendInvite(org.telecom.find(t => t.system === 'email').value, org.inviteCode, org.name)}>
+                Send Invite
+              </button>
+            {/if}
           </td>
           <td>
             <span class="delete-icon" on:click={() => handleDelete(org.id)}>🗑️</span>
@@ -231,7 +231,6 @@
 {:else}
   <p>No organizations found. Try logging in.</p>
 {/if}
-
 <style>
   .org-name {
     cursor: pointer;

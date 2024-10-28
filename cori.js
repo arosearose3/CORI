@@ -35,7 +35,7 @@ dotenv.config(); // Load environment variables
 
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.RUNTIME_ENV === 'prod' ? 3000 : 3001;
+const PORT = process.env.SERVER_PORT;
 
 // Setup Google OAuth2 client
 const oauth2Client = new OAuth2Client(
@@ -64,9 +64,9 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.RUNTIME_ENV === 'prod',
+    secure: false,
     httpOnly: true,
-    sameSite: process.env.RUNTIME_ENV === 'prod' ? 'none' : 'lax',
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
   }
 }));
