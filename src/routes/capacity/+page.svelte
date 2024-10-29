@@ -33,11 +33,30 @@
       if (unsubscribeUser) unsubscribeUser();
     };
   });
+
+
+function handleDataLoaded() {}
+function handleCapacityUpdate() {}
+function handleAvailabilityUpdate() {}
+function handleUpdateComplete() {}
+function handleError() {}
+function handleCapacityChange() {}
+function handleAvailabilityChange() {}
 </script>
 
 <!-- Display a loading message or handle it appropriately -->
 {#if isLoading && currentPractitionerRoleId !== null}
   <p>Loading practitioner data...</p>
 {:else}
-  <UpdateSchedule currentPractitionerRoleId={currentPractitionerRoleId} /> 
+
+  <UpdateSchedule
+  currentPractitionerRoleId={currentPractitionerRoleId}
+  on:dataLoaded={handleDataLoaded}
+  on:capacityUpdate={handleCapacityUpdate}
+  on:availabilityUpdate={handleAvailabilityUpdate}
+  on:updateComplete={handleUpdateComplete}
+  on:updateError={handleError}
+  on:capacityChange={handleCapacityChange}
+  on:availabilityChange={handleAvailabilityChange}
+/>
 {/if}

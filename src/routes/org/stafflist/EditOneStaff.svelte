@@ -1,5 +1,6 @@
 <script>
     import { createEventDispatcher } from 'svelte';
+    import UpdateSchedule from '../../capacity/UpdateSchedule.svelte';
     import { base } from '$app/paths';
     import { user} from '$lib/stores.js';
   
@@ -17,6 +18,8 @@
     let errorMessage = '';
     let successMessage = '';
     let loading = false;
+
+    let showUpdateSchedule = false;
   
     let roles = [
       { code: 'referrer', label: 'Referrer', description: 'Individuals or organizations that initiate a referral.', selected: false },
@@ -141,14 +144,41 @@
   }
 }
 
+function handleEditCapacity () {
+  showUpdateSchedule = true;
+}
+
     function handleClose() {
       dispatch('close', { success: false }); 
     }
-  </script>
+
+function handleDataLoaded() {}
+function handleCapacityUpdate() {}
+function handleAvailabilityUpdate() {}
+function handleUpdateComplete() {showUpdateSchedule = false;}
+function handleError() {}
+function handleCapacityChange() {}
+function handleAvailabilityChange() {}
+</script>
+
+{#if showUpdateSchedule && practitionerRoleId !== null}
+ 
+  <UpdateSchedule
+  currentPractitionerRoleId={practitionerRoleId}
+  on:dataLoaded={handleDataLoaded}
+  on:capacityUpdate={handleCapacityUpdate}
+  on:availabilityUpdate={handleAvailabilityUpdate}
+  on:updateComplete={handleUpdateComplete}
+  on:updateError={handleError}
+  on:capacityChange={handleCapacityChange}
+  on:availabilityChange={handleAvailabilityChange}
+/>
+{:else}
   
-  <div class="edit-staff-container">
+<div class="edit-staff-container">
     <h2>Edit Practitioner</h2>
-  
+    <button type="button" on:click={handleEditCapacity}>Edit Capacity and Availability</button>
+  <br>
     {#if errorMessage}
       <div class="error-message">{errorMessage}</div>
     {/if}
@@ -216,8 +246,9 @@
       <button type="button" on:click={handleClose}>Cancel</button>
     </form>
   </div>
+{/if}
 
-  <style>
+<style>
       .readonly-field {
     background-color: #f5f5f5;
     cursor: not-allowed;

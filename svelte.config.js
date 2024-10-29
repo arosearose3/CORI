@@ -11,13 +11,20 @@ const config = {
   kit: {
     adapter: adapter(),
     paths: {
-      base: process.env.RUNTIME_ENV = '/avail/cori'
+      base: process.env.BASE_PATH
     },
 
     prerender: {
       handleHttpError: 'warn'
     }
   },
+  vite: {
+    server: {
+      port: 5174 // Set the development server port to 5174
+    }
+  },
+  //preprocess: vitePreprocess(),
 };
 
 export default config;
+

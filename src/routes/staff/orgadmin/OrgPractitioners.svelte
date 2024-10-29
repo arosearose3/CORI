@@ -4,6 +4,7 @@
     import { base } from '$app/paths'; // Import base path
     import { fly } from 'svelte/transition';
     import RecordButton from './RecordButton.svelte';
+    import UpdateSchedule from '../../capacity/UpdateSchedule.svelte'; // Add this import
   
     let sortColumn = 'name';
     let sortDirection = 'asc';
@@ -17,6 +18,9 @@
     let errorMessage = '';
     let scoredAvailability;
     let pscoredAvailability;
+
+    let selectedPractitioner = null; // Add this for edit mode
+ 
   
     // Access the organizationId from the practitioner object in the user store
     $: organizationId = $user?.practitioner?.organizationId;
@@ -35,53 +39,55 @@
     /**
      * Fetches PractitionerRole resources for the organization and processes them.
      */
-    async function loadPractitioners() {
-      try {
+     async function loadPractitioners() {
+    try {
         if (!organizationId) {
-          throw new Error('Organization ID is not available');
+            throw new Error('Organization ID is not available');
         }
-  
+
         const response = await fetch(`${base}/api/role/withOrganization?organizationId=${organizationId}`);
         const data = await response.json();
-  
-        // Validate the bundle structure
-        if (data) {
-          const practitionerRoles = data;
-  
-          // Initialize a new array to store the combined data
-          const loadedPractitioners = [];
-  
-          // Fetch practitioner details in parallel
-          await Promise.all(practitionerRoles.map(async (role) => {
-            const practitionerId = role.practitioner?.reference?.split('/')[1]; // Extract Practitioner ID
+
+        if (!data) {
+            throw new Error('No data received from server');
+        }
+
+        const practitionerRoles = data;
+        if (!Array.isArray(practitionerRoles)) {
+            throw new Error('Invalid data format: expected an array of PractitionerRole resources');
+        }
+
+        // Initialize a new array to store the combined data
+        const loadedPractitioners = [];
+
+        // Fetch practitioner details in parallel
+        await Promise.all(practitionerRoles.map(async (role) => {
+            const practitionerId = role.practitioner?.reference?.split('/')[1];
             if (!practitionerId) return;
-  
+
             const practitionerData = await fetchPractitionerDetails(practitionerId);
             const capacity = getCapacity(role.extension);
-            const availableTimes = role.availableTime || []; // Extract availableTime
+            const availableTimes = role.availableTime || [];
             const lastUpdate = formatLastUpdate(role.meta.lastUpdated);
-  
-            // Combine all relevant data into a single object
+
             loadedPractitioners.push({
-              lastUpdate : lastUpdate,
-              id: practitionerId,
-              name: practitionerData.name,
-              birthDate: practitionerData.birthDate,
-              ...capacity, // Spread capacity fields
-              availableTimes: availableTimes, // Include availableTimes
+                lastUpdate: lastUpdate,
+                id: practitionerId,
+                roleId: role.id,
+                name: practitionerData.name,
+                birthDate: practitionerData.birthDate,
+                ...capacity,
+                availableTimes: availableTimes,
             });
-          }));
-  
-          // Assign the newly loaded practitioners to the reactive variable
-          practitioners = loadedPractitioners;
-        } else {
-          message = 'Invalid FHIR PractitionerRole bundle format.';
-        }
-      } catch (error) {
-        console.error('Error fetching practitioners:', error);
+        }));
+
+        practitioners = loadedPractitioners;
+
+    } catch (error) {
+        console.error('Error in loadPractitioners:', error);
         message = 'Failed to fetch practitioners. Please try again.';
-      }
     }
+}
   
     /**
      * Fetches details of a practitioner by their ID.
@@ -498,10 +504,37 @@ function sortPractitionersByScore() {
   return hours * 60 + minutes;
 }
 
+function handlePractitionerClick(practitioner) {
+        selectedPractitioner = {
+            ...practitioner,
+            id: practitioner.id, // Make sure ID is available for the edit component
+            roleId: practitioner.roleId // Make sure roleId is available
+        };
+    }
+
+    // Add this handler
+    function handleEditComplete(event) {
+        // Only reload practitioners if the edit was successful
+        if (event.detail?.success) {
+            loadPractitioners();
+        }
+        selectedPractitioner = null;
+    }
 
   </script>
   
   <style>
+
+    .practitioner-name {
+        cursor: pointer;
+        transition: transform 0.3s ease;
+        display: inline-block; /* Important for transform to work */
+    }
+
+    .practitioner-name:hover {
+        transform: scale(1.1);
+        font-weight: bold;
+    }
 
 .score-column {
     background-color: #e6f3ff; /* Light blue background for the score column */
@@ -561,7 +594,14 @@ function sortPractitionersByScore() {
     }
   </style>
   
-  
+<!-- HTML Section -->
+
+  {#if selectedPractitioner}
+    <UpdateSchedule
+        currentPractitionerRoleId={selectedPractitioner.roleId}
+        on:close={handleEditComplete}
+    />
+  {:else}
  
   <!-- Show Availability Checkbox -->
 <span><label>
@@ -611,7 +651,15 @@ function sortPractitionersByScore() {
   <tbody>
     {#each practitioners as practitioner}
       <tr>
-        <td>{practitioner.name}   ({practitioner.lastUpdate})</td>
+        <td>
+            <span 
+                class="practitioner-name" 
+                on:click={() => handlePractitionerClick(practitioner)}
+            >
+                {practitioner.name}
+            </span>
+            ({practitioner.lastUpdate})
+        </td>
         {#if scoredAvailability}
         <td class="score-column">
           {(scoredAvailability.find(s => s.name === practitioner.name)?.score || 0).toFixed(2)}
@@ -654,3 +702,4 @@ function sortPractitionersByScore() {
 <p class="message">{message || ''}</p>
 {/if}
 
+{/if}

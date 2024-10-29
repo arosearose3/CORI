@@ -436,5 +436,99 @@ router.delete('/delete', async (req, res) => {
   }
 });
 
+// Add this to roleRoutes.js
+
+// Get Organization and Practitioner names from PractitionerRole ID
+router.get('/getOrgAndPract', async (req, res) => {
+  try {
+    const { PRid } = req.query;
+    
+    if (!PRid) {
+      return res.status(400).json({ 
+        error: 'PractitionerRole ID (PRid) is required.' 
+      });
+    }
+
+    // First, get the PractitionerRole to get references
+    const url = `${FHIR_BASE_URL}/PractitionerRole/${PRid}`;
+    const accessToken = await getFhirAccessToken();
+
+    const roleResponse = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/fhir+json',
+      },
+    });
+
+    const practitionerRole = await handleBlobResponse(roleResponse.data);
+
+    // Extract references
+    const practitionerRef = practitionerRole.practitioner?.reference;
+    const organizationRef = practitionerRole.organization?.reference;
+
+    if (!practitionerRef || !organizationRef) {
+      return res.status(404).json({ 
+        error: 'PractitionerRole does not have both practitioner and organization references.' 
+      });
+    }
+
+    // Get Practitioner details
+    const practitionerId = practitionerRef.split('/').pop();
+    const practitionerUrl = `${FHIR_BASE_URL}/Practitioner/${practitionerId}`;
+    const practitionerResponse = await axios.get(practitionerUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/fhir+json',
+      },
+    });
+    const practitioner = await handleBlobResponse(practitionerResponse.data);
+
+    // Get Organization details
+    const organizationId = organizationRef.split('/').pop();
+    const organizationUrl = `${FHIR_BASE_URL}/Organization/${organizationId}`;
+    const organizationResponse = await axios.get(organizationUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/fhir+json',
+      },
+    });
+    const organization = await handleBlobResponse(organizationResponse.data);
+
+    // Extract names
+    // For practitioner, look for HumanName structure
+    let practitionerName = 'Unknown';
+    if (practitioner.name && practitioner.name.length > 0) {
+      const name = practitioner.name[0];
+      const given = name.given ? name.given.join(' ') : '';
+      const family = name.family || '';
+      practitionerName = `${given} ${family}`.trim();
+    }
+
+    // For organization, use the name field
+    const organizationName = organization.name || 'Unknown Organization';
+
+    res.status(200).json({
+      practitionerName,
+      organizationName,
+      practitionerId,
+      organizationId
+    });
+
+  } catch (error) {
+    console.error('Error fetching organization and practitioner details:', error);
+    
+    // Handle specific error cases
+    if (error.response?.status === 404) {
+      return res.status(404).json({ 
+        error: 'PractitionerRole, Practitioner, or Organization not found' 
+      });
+    }
+
+    res.status(500).json({ 
+      error: 'Failed to fetch details', 
+      details: error.message 
+    });
+  }
+});
 
 export default router;
