@@ -1,41 +1,49 @@
 <script>
   import { onMount } from 'svelte';
-  import { user, hasFetchedPractitionerData, updateAbilities } from '$lib/stores.js';
-
+  import { createEventDispatcher } from 'svelte';
+  import { base } from '$app/paths';
   import Pick4 from './Pick4.svelte';
   import Availability from './Availability.svelte';
-  import RecordButton from '../staff/orgadmin/RecordButton.svelte'; 
-  import { base } from '$app/paths';
+  import RecordButton from '../staff/orgadmin/RecordButton.svelte';
 
-  // Component state variables
+  const dispatch = createEventDispatcher();
+
+  // Props
+  export let currentPractitionerRoleId;
+
+  // Component state
   let capacityData = null;
   let availabilityData = null;
-
   let practitionerName = '';
+  let organizationName = '';
   let updateMessage = '';
   let errorMessage = '';
   let practitionerRole = null;
   let isDataReady = false;
-  let currentRoles = [];
+  let availabilityKey = 0;
 
-  export let currentPractitionerRoleId;
-
-  // Fetch PractitionerRole details when component mounts or ID changes
+  // Fetch data when component mounts or ID changes
   $: if (currentPractitionerRoleId && !isDataReady) {
     console.log('Fetching PractitionerRole data for ID:', currentPractitionerRoleId);
     fetchPractitionerRole(currentPractitionerRoleId);
   }
 
-  // React to changes in the user store
-  $: if ($user.practitioner && isDataReady) {
-    practitionerName = $user.practitioner.name || 'Unknown Practitioner';
-    currentRoles = $user.practitioner.roles || [];
-    console.log('Practitioner data ready. Name:', practitionerName, 'Roles:', currentRoles);
-  }
-
   onMount(() => {
-    console.log('Component mounted. Initial roles:', $user.practitioner?.roles);
+    console.log('Component mounted with PractitionerRole ID:', currentPractitionerRoleId);
   });
+
+  async function fetchPractitionerDetails(practitionerRoleId) {
+    try {
+      const response = await fetch(`${base}/api/role/getOrgAndPract?PRid=${practitionerRoleId}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      practitionerName = data.practitionerName || 'Unknown Practitioner';
+      organizationName = data.organizationName || 'Unknown Organization';
+    } catch (error) {
+      console.error('Error fetching practitioner details:', error);
+      errorMessage = `Error fetching practitioner details: ${error.message}`;
+    }
+  }
 
   async function fetchPractitionerRole(practitionerRoleId) {
     console.log('Fetching PractitionerRole, ID:', practitionerRoleId);
@@ -55,42 +63,14 @@
         
         availabilityData = practitionerRole.availableTime || [];
         
-        // Ensure roles are preserved
-        const roles = (practitionerRole.code || [])
-          .flatMap(c => c.coding || [])
-          .filter(coding => coding.system === 'https://combinebh.org/cori-value-set/')
-          .map(coding => coding.code)
-          .filter(Boolean);
-
-        console.log('Roles extracted from PractitionerRole:', roles);
-
-        // Update the user store with the fetched data
-        user.update(store => {
-          const updatedStore = {
-            ...store,
-            practitioner: {
-              ...store.practitioner,
-              PRid: practitionerRole.id,
-              capacity: capacityData,
-              availability: availabilityData,
-              roles: store.practitioner.roles // Explicitly preserve roles
-            }
-          };
-
-          // Only update roles if we have new roles and they're different from the current roles
-          if (roles.length > 0 && JSON.stringify(roles) !== JSON.stringify(store.practitioner.roles)) {
-            updatedStore.practitioner.roles = roles;
-            console.log('Updating roles in store:', roles);
-          } else {
-            console.log('Keeping existing roles:', store.practitioner.roles);
-          }
-          
-          updateAbilities(updatedStore.practitioner.roles);
-  
-          return updatedStore;
-        });
-
+        await fetchPractitionerDetails(practitionerRoleId);
         isDataReady = true;
+
+        // Notify parent of initial data
+        dispatch('dataLoaded', {
+          capacity: capacityData,
+          availability: availabilityData
+        });
       } else {
         throw new Error('Invalid PractitionerRole data structure');
       }
@@ -107,7 +87,6 @@
     }
 
     try {
-      // Ensure practitionerRole has the correct structure
       if (!practitionerRole.resourceType) {
         practitionerRole.resourceType = 'PractitionerRole';
       }
@@ -135,26 +114,11 @@
       updateMessage = 'Successfully updated capacity';
       console.log('Successfully updated capacity:', data);
 
-      // Update the user store with the new capacity data, preserving roles
-      user.update(store => ({
-        ...store,
-        practitioner: {
-          ...store.practitioner,
-          capacity: capacityData,
-          roles: store.practitioner.roles // Explicitly preserve roles
-        }
-      }));
+      // Notify parent of capacity update
+      dispatch('capacityUpdate', { capacity: capacityData });
 
-      console.log('Roles after capacity update:', $user.practitioner.roles);
-
-    } catch (error) {
-      console.error('Error updating capacity:', error);
-      errorMessage = `Error updating capacity: ${error.message}`;
-    }
-
-    // Handle patching availability
-    if (availabilityData && availabilityData.length > 0) {
-      try {
+      // Handle patching availability
+      if (availabilityData && availabilityData.length > 0) {
         const availabilityResponse = await fetch(`${base}/api/role/patchAvailability`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -170,112 +134,121 @@
         updateMessage += ' and availability';
         console.log('Successfully updated availability:', availabilityDataResponse);
 
-        // Update the user store with the new availability data, preserving roles
-        user.update(store => ({
-          ...store,
-          practitioner: {
-            ...store.practitioner,
-            availability: availabilityData,
-            roles: store.practitioner.roles // Explicitly preserve roles
-          }
-        }));
-
-        console.log('Roles after availability update:', $user.practitioner.roles);
-
-      } catch (error) {
-        console.error('Error updating availability:', error);
-        errorMessage = `Error updating availability: ${error.message}`;
+        // Notify parent of availability update
+        dispatch('availabilityUpdate', { availability: availabilityData });
       }
-    } else {
-      console.log('No availability data to update.');
+
+      // Notify parent of successful update
+      dispatch('updateComplete', {
+        capacity: capacityData,
+        availability: availabilityData
+      });
+
+    } catch (error) {
+      console.error('Error updating data:', error);
+      errorMessage = `Error updating data: ${error.message}`;
+      dispatch('updateError', { error: error.message });
     }
   }
 
   function handleCapacityChange(event) {
     const { capacityExtension } = event.detail;
     capacityData = capacityExtension[0].extension;
+    dispatch('capacityChange', { capacity: capacityData });
   }
 
   function handleAvailabilityUpdate(event) {
     availabilityData = event.detail;
+    dispatch('availabilityChange', { availability: availabilityData });
   }
 
-  let availabilityKey = 0;
+  function handleAvailabilityProcessed(event) {
+    const newAvailabilityData = event.detail.structuredAvailability;
+    
+    const newAvailableTimeArray = newAvailabilityData.availableTime;
+
+    if (Array.isArray(newAvailableTimeArray) && 
+        JSON.stringify(newAvailableTimeArray) !== JSON.stringify(availabilityData)) {
+      availabilityData = [...newAvailableTimeArray];
+      availabilityKey += 1;
+      dispatch('availabilityChange', { availability: availabilityData });
+    }
+  }
 
   $: availabilityComponent = {
-  key: availabilityKey,
-  data: availabilityData
-};
-
-function handleAvailabilityProcessed(event) {
-  const newAvailabilityData = event.detail.structuredAvailability;
-
-  console.log("updatesched newAvailData:", JSON.stringify(newAvailabilityData));
-  console.log("updatesched AvailData:", JSON.stringify(availabilityData));
-  
-  const newAvailableTimeArray = newAvailabilityData.availableTime;
-
-  if (Array.isArray(newAvailableTimeArray) && JSON.stringify(newAvailableTimeArray) !== JSON.stringify(availabilityData)) {
-    availabilityData = [...newAvailableTimeArray];
-    // Change the key to force re-rendering of the Availability component
-    availabilityKey += 1;
-  }
-}
-
+    key: availabilityKey,
+    data: availabilityData
+  };
 </script>
 
 <div>
   <h3>Capacity and Availability for {practitionerName}</h3>
-  <p>Current Roles: {currentRoles.join(', ')}</p>
+  {#if organizationName}
+    <p>Organization: {organizationName}</p>
+  {/if}
   
   <button on:click={handleSubmit}>Submit</button>
   {#if updateMessage}
-    <p>{updateMessage}</p>
+    <p class="success-message">{updateMessage}</p>
   {/if}
 
   {#if isDataReady}
-    <Pick4 on:capacitychange={handleCapacityChange} capacity={capacityData} />
-    <br>
-<!--     
-    <hr />
-    <RecordButton on:availabilityProcessed={handleAvailabilityProcessed} />
-    <br> -->
-    {#key availabilityComponent.key}
-    <Availability 
-      initialAvailability={availabilityComponent.data} 
-      on:availabilityUpdate={handleAvailabilityUpdate} 
+    <Pick4 
+      on:capacitychange={handleCapacityChange} 
+      capacity={capacityData} 
     />
+    <br>
+
+    {#key availabilityComponent.key}
+      <Availability 
+        initialAvailability={availabilityComponent.data} 
+        on:availabilityUpdate={handleAvailabilityUpdate} 
+      />
     {/key}
   {:else}
     <p>Loading...</p>
   {/if}
 
   {#if errorMessage}
-    <p class="error">{errorMessage}</p>
+    <p class="error-message">{errorMessage}</p>
   {/if}
 </div>
 
 <style>
-  h1, h2, h3 {
+  h3 {
     font-size: 1.5em;
     color: #333;
+    margin-bottom: 1rem;
   }
+
   button {
-    padding: 10px;
+    padding: 10px 20px;
     margin: 10px 0;
     background-color: #4CAF50;
     color: white;
     border: none;
+    border-radius: 4px;
     cursor: pointer;
+    font-size: 1rem;
   }
+
   button:hover {
     background-color: #45a049;
   }
-  label {
-    display: block;
+
+  .success-message {
+    color: #4CAF50;
+    padding: 10px;
     margin: 10px 0;
+    background-color: #e8f5e9;
+    border-radius: 4px;
   }
-  form {
-    margin-bottom: 20px;
+
+  .error-message {
+    color: #dc3545;
+    padding: 10px;
+    margin: 10px 0;
+    background-color: #fbeaea;
+    border-radius: 4px;
   }
 </style>
